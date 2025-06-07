@@ -21,6 +21,7 @@ public class VotingService {
     private final ConfigService configService;
     private final ReputationService reputationService;
     private final Logger logger;
+    private final GptSuggestionClassifier classifier;
 
     public VotingService(JavaPlugin plugin, Database database, GptService gptService,
                          ConfigService configService, ReputationService reputationService) {
@@ -30,9 +31,41 @@ public class VotingService {
         this.configService = configService;
         this.reputationService = reputationService;
         this.logger = plugin.getLogger();
+        this.classifier = new GptSuggestionClassifier(gptService, database, logger);
     }
 
     public void submitSuggestion(UUID player, String text) {
+        int id = insertBaseSuggestion(player, text);
+        if (id == -1) {
+            return;
+        }
+
+        classifier.classify(id, text, () -> mapConfigChange(id, player, text));
+    }
+
+    private int insertBaseSuggestion(UUID player, String text) {
+        if (database.getConnection() == null) return -1;
+        String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 1)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, player.toString());
+            ps.setNull(2, Types.INTEGER);
+            ps.setNull(3, Types.VARCHAR);
+            ps.setString(4, text);
+            ps.setTimestamp(5, Timestamp.from(Instant.now()));
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to store suggestion: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    private void mapConfigChange(int suggestionId, UUID player, String text) {
         String prompt = "Map the following suggestion to a config parameter ID and value as JSON {id, value}:\n" + text;
         gptService.submitRequest(prompt, player, response -> {
             if (response == null) {
@@ -43,29 +76,28 @@ public class VotingService {
                 JSONObject obj = new JSONObject(response);
                 int paramId = obj.getInt("id");
                 String value = obj.getString("value");
-                storeSuggestion(player, text, paramId, value);
+                updateMapping(suggestionId, paramId, value);
             } catch (Exception e) {
                 logger.warning("Invalid GPT mapping response: " + e.getMessage());
             }
         });
     }
 
-    private void storeSuggestion(UUID player, String text, int paramId, String value) {
+    private void updateMapping(int suggestionId, int paramId, String value) {
         if (database.getConnection() == null) return;
-        String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 1)";
+        String sql = "UPDATE suggestions SET parameter_id = ?, new_value = ? WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, player.toString());
-            ps.setInt(2, paramId);
-            ps.setString(3, value);
-            ps.setString(4, text);
-            ps.setTimestamp(5, Timestamp.from(Instant.now()));
+            ps.setInt(1, paramId);
+            ps.setString(2, value);
+            ps.setInt(3, suggestionId);
             ps.executeUpdate();
-            logger.info("Stored suggestion for parameter " + paramId);
+            logger.info("Stored suggestion " + suggestionId + " for parameter " + paramId);
         } catch (SQLException e) {
-            logger.severe("Failed to store suggestion: " + e.getMessage());
+            logger.severe("Failed to update suggestion: " + e.getMessage());
         }
     }
+
 
     public List<Suggestion> getOpenSuggestions() {
         List<Suggestion> list = new ArrayList<>();
