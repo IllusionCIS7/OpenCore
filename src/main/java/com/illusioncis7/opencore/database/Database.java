@@ -126,11 +126,34 @@ public class Database {
                     "UNIQUE KEY suggestion_player (suggestion_id, player_uuid)" +
                     ")";
             stmt.executeUpdate(voteSql);
+
+            String promptSql = "CREATE TABLE IF NOT EXISTS gpt_prompts (" +
+                    "category VARCHAR(50) PRIMARY KEY," +
+                    "prompt TEXT NOT NULL" +
+                    ")";
+            stmt.executeUpdate(promptSql);
         }
     }
 
     public Connection getConnection() {
         return connection;
+    }
+
+    public String getPrompt(String category) {
+        if (connection == null) return null;
+        String sql = "SELECT prompt FROM gpt_prompts WHERE category = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, category);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to load GPT prompt: " + e.getMessage());
+        }
+        return null;
     }
 
     public void disconnect() {

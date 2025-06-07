@@ -57,10 +57,10 @@ public class VotingServiceTest {
         when(rs.getBoolean(1)).thenReturn(false); // not editable
 
         doAnswer(inv -> {
-            Consumer<String> cb = inv.getArgument(2);
+            Consumer<String> cb = inv.getArgument(3);
             cb.accept("{\"id\":1,\"value\":\"new\"}");
             return null;
-        }).when(gptService).submitRequest(anyString(), any(), any());
+        }).when(gptService).submitTemplate(anyString(), anyString(), any(), any());
 
         Method m = VotingService.class.getDeclaredMethod("mapConfigChange", int.class, UUID.class, String.class);
         m.setAccessible(true);

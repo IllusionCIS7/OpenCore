@@ -33,21 +33,7 @@ public class GptSuggestionClassifier {
      * @param onConfig     callback executed if the suggestion is classified as CONFIG_CHANGE
      */
     public void classify(int suggestionId, String text, Runnable onConfig) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Analysiere folgenden Spielervorschlag und ordne ihn einem der folgenden Typen zu:\n")
-              .append("- CONFIG_CHANGE\n")
-              .append("- RULE_CHANGE\n")
-              .append("- MODERATION_REQUEST\n")
-              .append("- FEATURE_REQUEST\n")
-              .append("- BUG_REPORT\n")
-              .append("- EVENT_PROPOSAL\n")
-              .append("- OTHER\n\n")
-              .append("Gib das Ergebnis als JSON mit den Feldern `suggestion_type`, `reasoning`, `confidence` (0.0–1.0) zurück.\n\n")
-              .append("Vorschlag:\n\"")
-              .append(text)
-              .append("\"");
-
-        gptService.submitRequest(prompt.toString(), null, response -> {
+        gptService.submitTemplate("suggest_classify", text, null, response -> {
             if (response == null || response.isEmpty()) {
                 handleFailure(suggestionId, "Empty GPT response");
                 return;
