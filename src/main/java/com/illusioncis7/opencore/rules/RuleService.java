@@ -9,6 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.ArrayList;
+
+/** DTO for a rule change entry. */
+import com.illusioncis7.opencore.rules.RuleChange;
 
 public class RuleService {
     private final JavaPlugin plugin;
@@ -52,6 +56,36 @@ public class RuleService {
             logger.warning("Failed to load rule: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Retrieve the change history for a rule.
+     */
+    public List<RuleChange> getHistory(int ruleId) {
+        List<RuleChange> list = new ArrayList<>();
+        if (database.getConnection() == null) return list;
+        String sql = "SELECT id, old_text, new_text, changed_at, changed_by, suggestion_id " +
+                "FROM rule_changes WHERE rule_id = ? ORDER BY changed_at";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ruleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt(1);
+                    String oldText = rs.getString(2);
+                    String newText = rs.getString(3);
+                    Instant ts = rs.getTimestamp(4).toInstant();
+                    String changerStr = rs.getString(5);
+                    UUID changer = changerStr != null ? UUID.fromString(changerStr) : null;
+                    int sid = rs.getInt(6);
+                    Integer suggestionId = rs.wasNull() ? null : sid;
+                    list.add(new RuleChange(id, ruleId, oldText, newText, ts, changer, suggestionId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to load rule history: " + e.getMessage());
+        }
+        return list;
     }
 
     public boolean updateRule(int id, String newText, UUID changedBy, Integer suggestionId) {

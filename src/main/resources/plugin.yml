@@ -30,3 +30,5 @@ commands:
     description: Show closed vote results
   editrule:
     description: Edit an existing rule
+  rulehistory:
+    description: Show history for a rule

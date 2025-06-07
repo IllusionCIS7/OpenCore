@@ -36,7 +36,7 @@ public class MyRepCommand implements TabExecutor {
         for (int i = hist.size() - 1; i >= start; i--) {
             ReputationEvent ev = hist.get(i);
             String time = fmt.format(ev.timestamp);
-            sender.sendMessage(time + " - " + ev.reasonSummary + " (" + (ev.change >= 0 ? "+" : "") + ev.change + ")");
+            sender.sendMessage(time + " - " + ev.reasonSummary + " [" + ev.sourceModule + "] (" + (ev.change >= 0 ? "+" : "") + ev.change + ")");
         }
         return true;
     }
