@@ -1,5 +1,7 @@
 package com.illusioncis7.opencore.config;
 
+import com.illusioncis7.opencore.config.ConfigType;
+
 public class ConfigParameter {
     private int id;
     private String path;
@@ -12,6 +14,7 @@ public class ConfigParameter {
     private String impactCategory;
     private int impactRating = 5;
     private String currentValue;
+    private ConfigType valueType = ConfigType.STRING;
 
     public ConfigParameter() {}
 
@@ -108,6 +111,14 @@ public class ConfigParameter {
         this.currentValue = currentValue;
     }
 
+    public ConfigType getValueType() {
+        return valueType;
+    }
+
+    public void setValueType(ConfigType valueType) {
+        this.valueType = valueType;
+    }
+
     /**
      * Validate the provided value against this parameter's constraints.
      *
@@ -118,16 +129,20 @@ public class ConfigParameter {
         if (value == null) {
             return false;
         }
-        try {
-            int v;
-            if (value instanceof Number) {
-                v = ((Number) value).intValue();
-            } else {
-                v = Integer.parseInt(value.toString());
-            }
-            return v >= minValue && v <= maxValue;
-        } catch (NumberFormatException e) {
-            return false;
+        switch (valueType) {
+            case BOOLEAN:
+                return "true".equalsIgnoreCase(value.toString()) || "false".equalsIgnoreCase(value.toString());
+            case INTEGER:
+                try {
+                    int v = Integer.parseInt(value.toString());
+                    return v >= minValue && v <= maxValue;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            case LIST:
+            case STRING:
+            default:
+                return true;
         }
     }
 
@@ -141,7 +156,11 @@ public class ConfigParameter {
         }
         if (!isValid(value)) {
             if (sb.length() > 0) sb.append("; ");
-            sb.append("Value outside allowed range [").append(minValue).append("-").append(maxValue).append("]");
+            if (valueType == ConfigType.INTEGER) {
+                sb.append("Value outside allowed range [").append(minValue).append("-").append(maxValue).append("]");
+            } else {
+                sb.append("Invalid value for type ").append(valueType);
+            }
         }
         return sb.toString();
     }

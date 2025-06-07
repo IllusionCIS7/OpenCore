@@ -99,6 +99,11 @@ public class VotingService {
     }
 
     private void mapConfigChange(int suggestionId, UUID player, String text) {
+        if (countParameterChanges(text) > 5) {
+            storeMappingError(suggestionId, "Too many parameter changes (>5)");
+            markClosed(suggestionId);
+            return;
+        }
         gptService.submitTemplate("suggest_map", text, player, response -> {
             if (response == null) {
                 logger.warning("GPT mapping failed for suggestion: " + text);
@@ -441,6 +446,16 @@ public class VotingService {
             curr = tmp;
         }
         return prev[b.length()];
+    }
+
+    private int countParameterChanges(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        String[] parts = text.split("[;\n]");
+        int c = 0;
+        for (String p : parts) {
+            if (!p.trim().isEmpty()) c++;
+        }
+        return c;
     }
 
     public void checkOpenSuggestions() {

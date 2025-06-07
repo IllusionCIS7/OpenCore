@@ -24,12 +24,12 @@ public class RuleService {
     public List<Rule> getRules() {
         List<Rule> list = new ArrayList<>();
         if (database.getConnection() == null) return list;
-        String sql = "SELECT id, rule_text FROM server_rules ORDER BY id";
+        String sql = "SELECT id, rule_text, category FROM server_rules ORDER BY id";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(new Rule(rs.getInt(1), rs.getString(2)));
+                list.add(new Rule(rs.getInt(1), rs.getString(2), rs.getString(3))); 
             }
         } catch (SQLException e) {
             logger.warning("Failed to load rules: " + e.getMessage());
@@ -39,13 +39,13 @@ public class RuleService {
 
     public Rule getRule(int id) {
         if (database.getConnection() == null) return null;
-        String sql = "SELECT id, rule_text FROM server_rules WHERE id = ?";
+        String sql = "SELECT id, rule_text, category FROM server_rules WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new Rule(rs.getInt(1), rs.getString(2));
+                    return new Rule(rs.getInt(1), rs.getString(2), rs.getString(3));
                 }
             }
         } catch (SQLException e) {

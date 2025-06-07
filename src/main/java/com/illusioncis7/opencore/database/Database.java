@@ -70,6 +70,7 @@ public class Database {
                     "impact_category VARCHAR(50)," +
                     "impact_rating INT DEFAULT 5," +
                     "description TEXT," +
+                    "value_type VARCHAR(20) DEFAULT 'STRING'," +
                     "UNIQUE KEY path_param (path, parameter_path)" +
                     ")";
             stmt.executeUpdate(cfgSql);
@@ -145,7 +146,8 @@ public class Database {
 
             String rulesSql = "CREATE TABLE IF NOT EXISTS server_rules (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
-                    "rule_text TEXT NOT NULL" +
+                    "rule_text TEXT NOT NULL," +
+                    "category VARCHAR(50)" +
                     ")";
             stmt.executeUpdate(rulesSql);
 

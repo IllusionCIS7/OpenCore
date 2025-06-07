@@ -28,3 +28,5 @@ commands:
     description: List configurable parameters
   votestatus:
     description: Show closed vote results
+  editrule:
+    description: Edit an existing rule

@@ -24,7 +24,7 @@ public class RulesCommand implements CommandExecutor {
                 if (r == null) {
                     sender.sendMessage("Rule not found.");
                 } else {
-                    sender.sendMessage("#" + r.id + ": " + r.text);
+                    sender.sendMessage("#" + r.id + " [" + r.category + "]: " + r.text);
                 }
             } catch (NumberFormatException e) {
                 sender.sendMessage("Invalid id.");
@@ -38,7 +38,7 @@ public class RulesCommand implements CommandExecutor {
             return true;
         }
         for (Rule r : rules) {
-            sender.sendMessage("#" + r.id + ": " + r.text);
+            sender.sendMessage("#" + r.id + " [" + r.category + "]: " + r.text);
         }
         return true;
     }
