@@ -1,0 +1,3 @@
+# Beispielkonfiguration für das GPT-Modul
+api-key: "REPLACE-ME"
+interval-seconds: 60
