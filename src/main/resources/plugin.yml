@@ -14,3 +14,9 @@ commands:
     description: List server rules
   rollbackconfig:
     description: Roll back a configuration change
+  myrep:
+    description: Show your reputation
+  gptlog:
+    description: Show recent GPT responses
+  repinfo:
+    description: Show reputation info for a player
