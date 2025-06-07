@@ -2,6 +2,7 @@ name: OpenCore
 version: 0.1
 main: com.illusioncis7.opencore.OpenCore
 api-version: 1.21
+softdepend: [Plan]
 commands:
   suggest:
     description: Submit a configuration suggestion

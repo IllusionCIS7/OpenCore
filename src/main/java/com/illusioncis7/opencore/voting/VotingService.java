@@ -6,11 +6,13 @@ import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.voting.SuggestionType;
+import com.illusioncis7.opencore.plan.PlanHook;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
 
 import java.sql.*;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -25,16 +27,18 @@ public class VotingService {
     private final ReputationService reputationService;
     private final Logger logger;
     private final GptSuggestionClassifier classifier;
+    private final PlanHook planHook;
 
     public VotingService(JavaPlugin plugin, Database database, GptService gptService,
                          ConfigService configService, RuleService ruleService,
-                         ReputationService reputationService) {
+                         ReputationService reputationService, PlanHook planHook) {
         this.plugin = plugin;
         this.database = database;
         this.gptService = gptService;
         this.configService = configService;
         this.ruleService = ruleService;
         this.reputationService = reputationService;
+        this.planHook = planHook;
         this.logger = plugin.getLogger();
         this.classifier = new GptSuggestionClassifier(gptService, database, logger);
     }
@@ -108,12 +112,29 @@ public class VotingService {
                 JSONObject obj = new JSONObject(response);
                 int ruleId = obj.getInt("id");
                 String newText = obj.getString("text");
+                String summary = obj.optString("summary", "");
+                int impact = obj.optInt("impact", 5);
                 updateMapping(suggestionId, ruleId, newText);
+                storeRuleInfo(suggestionId, summary, impact);
             } catch (Exception e) {
                 logger.warning("Invalid GPT rule mapping response: " + e.getMessage());
                 storeMappingError(suggestionId, "Parse error: " + e.getMessage());
             }
         });
+    }
+
+    private void storeRuleInfo(int suggestionId, String summary, int impact) {
+        if (database.getConnection() == null) return;
+        String sql = "UPDATE suggestions SET gpt_reasoning = ?, gpt_confidence = ? WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, summary);
+            ps.setInt(2, impact);
+            ps.setInt(3, suggestionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warning("Failed to store rule info: " + e.getMessage());
+        }
     }
 
     private boolean isEditableParam(int paramId) {
@@ -214,26 +235,77 @@ public class VotingService {
 
     private void evaluateVotes(int suggestionId) {
         if (database.getConnection() == null) return;
-        String sql = "SELECT SUM(CASE WHEN vote_yes THEN weight ELSE 0 END)," +
-                " SUM(CASE WHEN vote_yes THEN 0 ELSE weight END), COUNT(*) FROM votes WHERE suggestion_id = ?";
-        int yes = 0;
-        int no = 0;
-        int count = 0;
+
+        int yesWeight = 0;
+        int noWeight = 0;
+        int highRepYes = 0;
+        String voteSql = "SELECT player_uuid, vote_yes, weight FROM votes WHERE suggestion_id = ?";
         try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(voteSql)) {
             ps.setInt(1, suggestionId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    yes = rs.getInt(1);
-                    no = rs.getInt(2);
-                    count = rs.getInt(3);
+                while (rs.next()) {
+                    UUID voter = UUID.fromString(rs.getString(1));
+                    boolean yes = rs.getBoolean(2);
+                    int weight = rs.getInt(3);
+                    if (yes) {
+                        yesWeight += weight;
+                        if (reputationService.getReputation(voter) >= 50) {
+                            highRepYes++;
+                        }
+                    } else {
+                        noWeight += weight;
+                    }
                 }
             }
         } catch (SQLException e) {
             logger.severe("Failed to tally votes: " + e.getMessage());
             return;
         }
-        if (count >= 3 && yes > no) {
+
+        SuggestionType type = SuggestionType.CONFIG_CHANGE;
+        int paramId = 0;
+        double impact = 5.0;
+        String infoSql = "SELECT suggestion_type, parameter_id, gpt_confidence FROM suggestions WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(infoSql)) {
+            ps.setInt(1, suggestionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    type = SuggestionType.valueOf(rs.getString(1));
+                    paramId = rs.getInt(2);
+                    impact = rs.getDouble(3);
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to load suggestion info: " + e.getMessage());
+            return;
+        }
+
+        if (type == SuggestionType.CONFIG_CHANGE) {
+            String impactSql = "SELECT impact_rating FROM config_params WHERE id = ?";
+            try (Connection conn = database.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(impactSql)) {
+                ps.setInt(1, paramId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        impact = rs.getInt(1);
+                    }
+                }
+            } catch (SQLException e) {
+                logger.warning("Failed to fetch config impact: " + e.getMessage());
+            }
+        }
+
+        int totalActiveWeight = 0;
+        for (UUID active : planHook.getActivePlayers(Duration.ofDays(30))) {
+            int rep = reputationService.getReputation(active);
+            totalActiveWeight += Math.max(1, rep / 10 + 1);
+        }
+        int requiredWeight = Math.max(3, (int) Math.ceil((impact / 10.0) * totalActiveWeight));
+        int requiredHighRep = impact >= 8 ? 1 : 0;
+
+        if (yesWeight > noWeight && yesWeight >= requiredWeight && highRepYes >= requiredHighRep) {
             applySuggestion(suggestionId);
         }
     }

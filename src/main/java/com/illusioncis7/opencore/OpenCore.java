@@ -12,6 +12,7 @@ import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
 import com.illusioncis7.opencore.voting.command.VoteCommand;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.rules.command.RulesCommand;
+import com.illusioncis7.opencore.plan.PlanHook;
 import java.io.File;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -24,6 +25,7 @@ public class OpenCore extends JavaPlugin {
     private RuleService ruleService;
     private ReputationService reputationService;
     private VotingService votingService;
+    private PlanHook planHook;
 
     public static OpenCore getInstance() {
         return instance;
@@ -50,7 +52,14 @@ public class OpenCore extends JavaPlugin {
         gptService = new GptService(this, database);
         gptService.init();
 
-        votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService);
+        planHook = new PlanHook();
+        if (planHook.hook()) {
+            getLogger().info("Hooked into Plan API");
+        } else {
+            getLogger().warning("Plan not found or QUERY_API unavailable");
+        }
+
+        votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
         getCommand("suggest").setExecutor(new SuggestCommand(votingService));
         getCommand("suggestions").setExecutor(new SuggestionsCommand(votingService));
         getCommand("vote").setExecutor(new VoteCommand(votingService));
