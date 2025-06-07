@@ -31,8 +31,9 @@ public class GptSuggestionClassifier {
      * @param suggestionId database id of the suggestion
      * @param text         original suggestion text
      * @param onConfig     callback executed if the suggestion is classified as CONFIG_CHANGE
+     * @param onRule       callback executed if the suggestion is classified as RULE_CHANGE
      */
-    public void classify(int suggestionId, String text, Runnable onConfig) {
+    public void classify(int suggestionId, String text, Runnable onConfig, Runnable onRule) {
         gptService.submitTemplate("suggest_classify", text, null, response -> {
             if (response == null || response.isEmpty()) {
                 handleFailure(suggestionId, "Empty GPT response");
@@ -50,6 +51,8 @@ public class GptSuggestionClassifier {
 
                 if (type == SuggestionType.CONFIG_CHANGE && onConfig != null) {
                     onConfig.run();
+                } else if (type == SuggestionType.RULE_CHANGE && onRule != null) {
+                    onRule.run();
                 }
             } catch (Exception e) {
                 handleFailure(suggestionId, "Parse error: " + e.getMessage());

@@ -132,6 +132,23 @@ public class Database {
                     "prompt TEXT NOT NULL" +
                     ")";
             stmt.executeUpdate(promptSql);
+
+            String rulesSql = "CREATE TABLE IF NOT EXISTS server_rules (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "rule_text TEXT NOT NULL" +
+                    ")";
+            stmt.executeUpdate(rulesSql);
+
+            String ruleLogSql = "CREATE TABLE IF NOT EXISTS rule_changes (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "rule_id INT NOT NULL," +
+                    "old_text TEXT NOT NULL," +
+                    "new_text TEXT NOT NULL," +
+                    "changed_at TIMESTAMP NOT NULL," +
+                    "changed_by VARCHAR(36)," +
+                    "suggestion_id INT" +
+                    ")";
+            stmt.executeUpdate(ruleLogSql);
         }
     }
 

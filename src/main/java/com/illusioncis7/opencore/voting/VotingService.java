@@ -4,6 +4,8 @@ import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.reputation.ReputationService;
+import com.illusioncis7.opencore.rules.RuleService;
+import com.illusioncis7.opencore.voting.SuggestionType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
 
@@ -19,16 +21,19 @@ public class VotingService {
     private final Database database;
     private final GptService gptService;
     private final ConfigService configService;
+    private final RuleService ruleService;
     private final ReputationService reputationService;
     private final Logger logger;
     private final GptSuggestionClassifier classifier;
 
     public VotingService(JavaPlugin plugin, Database database, GptService gptService,
-                         ConfigService configService, ReputationService reputationService) {
+                         ConfigService configService, RuleService ruleService,
+                         ReputationService reputationService) {
         this.plugin = plugin;
         this.database = database;
         this.gptService = gptService;
         this.configService = configService;
+        this.ruleService = ruleService;
         this.reputationService = reputationService;
         this.logger = plugin.getLogger();
         this.classifier = new GptSuggestionClassifier(gptService, database, logger);
@@ -40,7 +45,9 @@ public class VotingService {
             return;
         }
 
-        classifier.classify(id, text, () -> mapConfigChange(id, player, text));
+        classifier.classify(id, text,
+                () -> mapConfigChange(id, player, text),
+                () -> mapRuleChange(id, player, text));
     }
 
     private int insertBaseSuggestion(UUID player, String text) {
@@ -90,6 +97,25 @@ public class VotingService {
         });
     }
 
+    private void mapRuleChange(int suggestionId, UUID player, String text) {
+        gptService.submitTemplate("rule_map", text, player, response -> {
+            if (response == null) {
+                logger.warning("GPT mapping failed for rule suggestion: " + text);
+                storeMappingError(suggestionId, "GPT returned no response");
+                return;
+            }
+            try {
+                JSONObject obj = new JSONObject(response);
+                int ruleId = obj.getInt("id");
+                String newText = obj.getString("text");
+                updateMapping(suggestionId, ruleId, newText);
+            } catch (Exception e) {
+                logger.warning("Invalid GPT rule mapping response: " + e.getMessage());
+                storeMappingError(suggestionId, "Parse error: " + e.getMessage());
+            }
+        });
+    }
+
     private boolean isEditableParam(int paramId) {
         if (database.getConnection() == null) return false;
         String sql = "SELECT editable FROM config_params WHERE id = ?";
@@ -130,7 +156,7 @@ public class VotingService {
             ps.setString(2, value);
             ps.setInt(3, suggestionId);
             ps.executeUpdate();
-            logger.info("Stored suggestion " + suggestionId + " for parameter " + paramId);
+            logger.info("Stored suggestion " + suggestionId + " for target " + paramId);
         } catch (SQLException e) {
             logger.severe("Failed to update suggestion: " + e.getMessage());
         }
@@ -140,8 +166,12 @@ public class VotingService {
     public List<Suggestion> getOpenSuggestions() {
         List<Suggestion> list = new ArrayList<>();
         if (database.getConnection() == null) return list;
-        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, c.description " +
-                "FROM suggestions s LEFT JOIN config_params c ON s.parameter_id = c.id WHERE s.open = 1";
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+                "COALESCE(c.description, r.rule_text) " +
+                "FROM suggestions s " +
+                "LEFT JOIN config_params c ON s.parameter_id = c.id " +
+                "LEFT JOIN server_rules r ON s.parameter_id = r.id " +
+                "WHERE s.open = 1";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -210,16 +240,20 @@ public class VotingService {
 
     private void applySuggestion(int suggestionId) {
         if (database.getConnection() == null) return;
-        String sql = "SELECT parameter_id, new_value FROM suggestions WHERE id = ? AND open = 1";
+        String sql = "SELECT suggestion_type, parameter_id, new_value, player_uuid FROM suggestions WHERE id = ? AND open = 1";
+        SuggestionType type = null;
         int paramId = 0;
         String value = null;
+        UUID player = null;
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, suggestionId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    paramId = rs.getInt(1);
-                    value = rs.getString(2);
+                    type = SuggestionType.valueOf(rs.getString(1));
+                    paramId = rs.getInt(2);
+                    value = rs.getString(3);
+                    player = UUID.fromString(rs.getString(4));
                 }
             }
         } catch (SQLException e) {
@@ -227,10 +261,15 @@ public class VotingService {
             return;
         }
         if (value == null) return;
-        boolean updated = configService.updateParameter(paramId, value);
+        boolean updated = false;
+        if (type == SuggestionType.CONFIG_CHANGE) {
+            updated = configService.updateParameter(paramId, value);
+        } else if (type == SuggestionType.RULE_CHANGE) {
+            updated = ruleService.updateRule(paramId, value, player, suggestionId);
+        }
         if (updated) {
             markClosed(suggestionId);
-            logger.info("Applied suggestion " + suggestionId + " updating parameter " + paramId);
+            logger.info("Applied suggestion " + suggestionId + " updating target " + paramId);
         }
     }
 
