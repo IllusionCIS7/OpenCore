@@ -1,5 +1,6 @@
 package com.illusioncis7.opencore.voting.command;
 
+import com.illusioncis7.opencore.OpenCore;
 import com.illusioncis7.opencore.voting.VotingService;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -26,8 +27,23 @@ public class VoteCommand implements CommandExecutor {
         try {
             int id = Integer.parseInt(args[0]);
             boolean yes = args[1].equalsIgnoreCase("yes") || args[1].equalsIgnoreCase("y");
-            votingService.castVote(((Player) sender).getUniqueId(), id, yes);
-            sender.sendMessage("Vote recorded.");
+            boolean success = votingService.castVote(((Player) sender).getUniqueId(), id, yes);
+            if (!success) {
+                sender.sendMessage("Unknown or closed suggestion.");
+                OpenCore.getInstance().getLogger().warning("Invalid vote from " + sender.getName() + " for " + id);
+                return true;
+            }
+            if (votingService.isSuggestionOpen(id)) {
+                com.illusioncis7.opencore.voting.VotingService.VoteWeights w = votingService.getVoteWeights(id);
+                int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
+                if (remaining > 0) {
+                    sender.sendMessage("Noch " + remaining + " Stimmen nötig.");
+                } else {
+                    sender.sendMessage("Quorum erreicht – Voting endet");
+                }
+            } else {
+                sender.sendMessage("Voting concluded.");
+            }
         } catch (NumberFormatException e) {
             sender.sendMessage("Invalid id.");
         }

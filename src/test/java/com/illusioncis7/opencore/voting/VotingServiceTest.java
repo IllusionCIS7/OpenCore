@@ -36,13 +36,16 @@ public class VotingServiceTest {
     private RuleService ruleService;
     @Mock
     private ReputationService reputationService;
+    @Mock
+    private com.illusioncis7.opencore.plan.PlanHook planHook;
 
     private VotingService service;
 
     @BeforeEach
     public void setup() {
         when(plugin.getLogger()).thenReturn(Logger.getLogger("test"));
-        service = new VotingService(plugin, database, gptService, configService, ruleService, reputationService);
+        when(plugin.getConfig()).thenReturn(new org.bukkit.configuration.file.YamlConfiguration());
+        service = new VotingService(plugin, database, gptService, configService, ruleService, reputationService, planHook);
     }
 
     @Test

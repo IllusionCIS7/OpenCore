@@ -55,4 +55,29 @@ public class PlanHook {
             return set;
         });
     }
+
+    /**
+     * Fetch the last session end time for a player.
+     *
+     * @param uuid Player UUID
+     * @return Instant of the last seen time or null if unavailable
+     */
+    public java.time.Instant getLastSeen(UUID uuid) {
+        if (queryService == null) return null;
+        String sql = "SELECT MAX(plan_sessions.session_end) FROM plan_sessions " +
+                "JOIN plan_users ON plan_users.id = plan_sessions.user_id " +
+                "WHERE plan_users.uuid = ?";
+        return queryService.query(sql, stmt -> {
+            stmt.setString(1, uuid.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    long ts = rs.getLong(1);
+                    if (ts > 0) {
+                        return java.time.Instant.ofEpochMilli(ts);
+                    }
+                }
+            }
+            return null;
+        });
+    }
 }

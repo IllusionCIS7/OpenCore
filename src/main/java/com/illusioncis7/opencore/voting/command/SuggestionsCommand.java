@@ -2,6 +2,7 @@ package com.illusioncis7.opencore.voting.command;
 
 import com.illusioncis7.opencore.voting.Suggestion;
 import com.illusioncis7.opencore.voting.VotingService;
+import com.illusioncis7.opencore.voting.VotingService.VoteWeights;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -23,8 +24,15 @@ public class SuggestionsCommand implements CommandExecutor {
             return true;
         }
         for (Suggestion s : list) {
-            String desc = s.description != null ? s.description : "n/a";
-            sender.sendMessage("#" + s.id + " -> param " + s.parameterId + " (" + desc + ") = " + s.newValue + " (" + s.text + ")");
+            VoteWeights w = votingService.getVoteWeights(s.id);
+            int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
+            String title = (s.description != null && !s.description.isEmpty()) ? s.description : s.text;
+            String progress = w.yesWeight + "/" + w.requiredWeight + " yes";
+            if (remaining > 0) {
+                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] " + remaining + " votes needed");
+            } else {
+                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] quorum reached");
+            }
         }
         return true;
     }

@@ -17,6 +17,8 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.sql.Timestamp;
 
 /**
  * Scans configuration files and allows updates of single parameters.
@@ -127,7 +129,7 @@ public class ConfigService {
     /**
      * Update a configuration parameter by ID with a new value.
      */
-    public boolean updateParameter(int id, String newValue) {
+    public boolean updateParameter(int id, String newValue, UUID changedBy) {
         if (database.getConnection() == null) {
             return false;
         }
@@ -141,7 +143,13 @@ public class ConfigService {
                 if (rs.next()) {
                     String path = rs.getString(1);
                     String param = rs.getString(2);
-                    return updateFile(new File(path), param, newValue);
+                    File file = new File(path);
+                    Object oldVal = loadValue(file, param);
+                    boolean ok = updateFile(file, param, newValue);
+                    if (ok) {
+                        logChange(id, oldVal, newValue, changedBy);
+                    }
+                    return ok;
                 }
             }
         } catch (SQLException e) {
@@ -195,6 +203,99 @@ public class ConfigService {
             }
         }
         return false;
+    }
+
+    private Object loadValue(File file, String parameterPath) {
+        try {
+            if (file.getName().toLowerCase().endsWith(".yml")) {
+                FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+                return cfg.get(parameterPath);
+            } else if (file.getName().toLowerCase().endsWith(".conf")) {
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        if (line.startsWith(parameterPath + "=")) {
+                            return line.substring(parameterPath.length() + 1).trim();
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to read config value: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private void logChange(int paramId, Object oldVal, Object newVal, UUID player) {
+        if (database.getConnection() == null) return;
+        String sql = "INSERT INTO config_change_history (change_id, player_uuid, param_key, old_value, new_value, changed_at) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, UUID.randomUUID().toString());
+            if (player != null) {
+                ps.setString(2, player.toString());
+            } else {
+                ps.setNull(2, Types.VARCHAR);
+            }
+            ps.setString(3, String.valueOf(paramId));
+            ps.setString(4, oldVal != null ? oldVal.toString() : null);
+            ps.setString(5, newVal != null ? newVal.toString() : null);
+            ps.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to log config change: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Rollback a change by applying the stored old value.
+     */
+    public boolean rollbackChange(UUID changeId) {
+        if (database.getConnection() == null) return false;
+        String sql = "SELECT param_key, old_value FROM config_change_history WHERE change_id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, changeId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int paramId = Integer.parseInt(rs.getString(1));
+                    String oldVal = rs.getString(2);
+                    return updateParameter(paramId, oldVal, null);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to rollback config: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Fetch all configuration parameters with their current value.
+     */
+    public java.util.List<ConfigParameter> listParameters() {
+        java.util.List<ConfigParameter> list = new java.util.ArrayList<>();
+        if (database.getConnection() == null) return list;
+        String sql = "SELECT id, path, parameter_path, editable, impact_rating FROM config_params";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                ConfigParameter p = new ConfigParameter();
+                p.setId(rs.getInt(1));
+                String path = rs.getString(2);
+                String param = rs.getString(3);
+                p.setPath(path);
+                p.setParameterPath(param);
+                p.setEditable(rs.getBoolean(4));
+                p.setImpactRating(rs.getInt(5));
+                Object val = loadValue(new File(path), param);
+                p.setCurrentValue(val != null ? val.toString() : null);
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to load config parameters: " + e.getMessage());
+        }
+        return list;
     }
 }
 

@@ -18,6 +18,9 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -31,6 +34,12 @@ public class GptService {
     private final Database database;
     private final Queue<GptRequest> queue = new ConcurrentLinkedQueue<>();
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final Set<UUID> activePlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+    private static final long COOLDOWN_MS = TimeUnit.MINUTES.toMillis(1);
+
+    /** Duration of the last GPT response in milliseconds. */
+    private volatile long lastResponseMs = -1;
 
     private String apiKey;
     private int intervalSeconds;
@@ -65,12 +74,38 @@ public class GptService {
         queue.clear();
     }
 
+    /**
+     * Duration of the most recent GPT request in milliseconds or -1 if none.
+     */
+    public long getLastResponseDuration() {
+        return lastResponseMs;
+    }
+
     public void submitRequest(String prompt, UUID playerUuid, Consumer<String> callback) {
         if (!enabled) {
             if (callback != null) {
                 callback.accept(null);
             }
             return;
+        }
+
+        if (playerUuid != null) {
+            Long last = cooldowns.get(playerUuid);
+            if (last != null && System.currentTimeMillis() - last < COOLDOWN_MS) {
+                plugin.getLogger().warning("GPT cooldown active for " + playerUuid);
+                if (callback != null) {
+                    callback.accept(null);
+                }
+                return;
+            }
+            if (activePlayers.contains(playerUuid)) {
+                plugin.getLogger().warning("Player " + playerUuid + " already has an active GPT request");
+                if (callback != null) {
+                    callback.accept(null);
+                }
+                return;
+            }
+            activePlayers.add(playerUuid);
         }
 
         UUID requestId = UUID.randomUUID();
@@ -101,11 +136,12 @@ public class GptService {
             return;
         }
         processing = true;
-        sendRequest(request);
+        sendRequest(request, 1);
     }
 
-    private void sendRequest(GptRequest request) {
-        plugin.getLogger().info("Processing GPT request " + request.requestId);
+    private void sendRequest(GptRequest request, int attempt) {
+        plugin.getLogger().info("Processing GPT request " + request.requestId + " (attempt " + attempt + ")");
+        long start = System.currentTimeMillis();
         logRequest(request);
 
         JSONObject payload = new JSONObject();
@@ -128,6 +164,7 @@ public class GptService {
                 .orTimeout(30, TimeUnit.SECONDS)
                 .whenComplete((response, throwable) -> {
                     String answer = null;
+                    boolean success = false;
                     if (throwable != null) {
                         plugin.getLogger().severe("GPT request " + request.requestId + " failed: " + throwable.getMessage());
                     } else if (response.statusCode() == 200) {
@@ -138,6 +175,7 @@ public class GptService {
                                 JSONObject first = choices.getJSONObject(0);
                                 JSONObject msg = first.getJSONObject("message");
                                 answer = msg.getString("content");
+                                success = true;
                             }
                         } catch (Exception e) {
                             plugin.getLogger().severe("Error parsing GPT response: " + e.getMessage());
@@ -146,9 +184,20 @@ public class GptService {
                         plugin.getLogger().severe("GPT request returned status " + response.statusCode());
                     }
 
+                    if (!success && attempt < 3) {
+                        plugin.getLogger().warning("Retrying GPT request " + request.requestId + " (attempt " + (attempt + 1) + ")");
+                        sendRequest(request, attempt + 1);
+                        return;
+                    }
+
                     logResponse(request.requestId, answer);
+                    lastResponseMs = System.currentTimeMillis() - start;
                     if (request.callback != null) {
                         request.callback.accept(answer);
+                    }
+                    if (request.playerUuid != null) {
+                        activePlayers.remove(request.playerUuid);
+                        cooldowns.put(request.playerUuid, System.currentTimeMillis());
                     }
                     processing = false;
                 });
