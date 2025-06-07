@@ -39,14 +39,25 @@ public class Database {
     }
 
     private void setupTables() throws SQLException {
-        String sql = "CREATE TABLE IF NOT EXISTS chat_log (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY," +
-                "player_uuid VARCHAR(36) NOT NULL," +
-                "message_time TIMESTAMP NOT NULL," +
-                "message TEXT NOT NULL" +
-                ")";
         try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate(sql);
+            String chatSql = "CREATE TABLE IF NOT EXISTS chat_log (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "message_time TIMESTAMP NOT NULL," +
+                    "message TEXT NOT NULL" +
+                    ")";
+            stmt.executeUpdate(chatSql);
+
+            String gptSql = "CREATE TABLE IF NOT EXISTS gpt_log (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "request_uuid VARCHAR(36) NOT NULL," +
+                    "player_uuid VARCHAR(36)," +
+                    "request_time TIMESTAMP NOT NULL," +
+                    "prompt TEXT NOT NULL," +
+                    "response TEXT," +
+                    "response_time TIMESTAMP" +
+                    ")";
+            stmt.executeUpdate(gptSql);
         }
     }
 
