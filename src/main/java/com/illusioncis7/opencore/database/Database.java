@@ -100,6 +100,27 @@ public class Database {
                     "description TEXT" +
                     ")";
             stmt.executeUpdate(guideSql);
+
+            String suggestionSql = "CREATE TABLE IF NOT EXISTS suggestions (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "parameter_id INT NOT NULL," +
+                    "new_value VARCHAR(255) NOT NULL," +
+                    "text TEXT," +
+                    "created TIMESTAMP NOT NULL," +
+                    "open BOOLEAN DEFAULT 1" +
+                    ")";
+            stmt.executeUpdate(suggestionSql);
+
+            String voteSql = "CREATE TABLE IF NOT EXISTS votes (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "suggestion_id INT NOT NULL," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "vote_yes BOOLEAN NOT NULL," +
+                    "weight INT NOT NULL," +
+                    "UNIQUE KEY suggestion_player (suggestion_id, player_uuid)" +
+                    ")";
+            stmt.executeUpdate(voteSql);
         }
     }
 
