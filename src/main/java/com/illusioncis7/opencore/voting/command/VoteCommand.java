@@ -34,7 +34,13 @@ public class VoteCommand implements CommandExecutor {
                 return true;
             }
             if (votingService.isSuggestionOpen(id)) {
-                sender.sendMessage("Vote registered.");
+                com.illusioncis7.opencore.voting.VotingService.VoteWeights w = votingService.getVoteWeights(id);
+                int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
+                if (remaining > 0) {
+                    sender.sendMessage("Noch " + remaining + " Stimmen nötig.");
+                } else {
+                    sender.sendMessage("Quorum erreicht – Voting endet");
+                }
             } else {
                 sender.sendMessage("Voting concluded.");
             }
