@@ -52,10 +52,19 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject obj = arr.getJSONObject(i);
                     String alias = obj.getString("alias_id");
-                    int change = obj.getInt("change");
-                    String reason = obj.optString("reason_summary", "chat analysis");
                     UUID playerUuid = resolveAlias(alias);
-                    if (playerUuid != null) {
+                    if (playerUuid == null) continue;
+
+                    int change = 0;
+                    for (String key : obj.keySet()) {
+                        if ("alias_id".equals(key) || "reason_summary".equals(key)) continue;
+                        if (reputationService.hasRange(key)) {
+                            double val = obj.optDouble(key, 0.0);
+                            change += reputationService.computeChange(key, val);
+                        }
+                    }
+                    if (change != 0) {
+                        String reason = obj.optString("reason_summary", "chat analysis");
                         reputationService.adjustReputation(playerUuid, change, reason, "chat", obj.toString());
                     }
                 }

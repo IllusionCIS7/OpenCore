@@ -1,7 +1,12 @@
 package com.illusioncis7.opencore.reputation;
 
 import com.illusioncis7.opencore.database.Database;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
 
 import java.sql.*;
 import java.time.Instant;
@@ -15,10 +20,55 @@ public class ReputationService {
     private final Database database;
     private final Logger logger;
 
+    private int minScore = -500;
+    private int maxScore = 500;
+
+    private static class Range {
+        final int min;
+        final int max;
+        Range(int min, int max) { this.min = min; this.max = max; }
+    }
+
+    private final java.util.Map<String, Range> ranges = new java.util.HashMap<>();
+
     public ReputationService(JavaPlugin plugin, Database database) {
         this.plugin = plugin;
         this.database = database;
         this.logger = plugin.getLogger();
+        loadConfig();
+    }
+
+    private void loadConfig() {
+        File configFile = new File(plugin.getDataFolder(), "reputation.yml");
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
+        ConfigurationSection rep = cfg.getConfigurationSection("reputation");
+        if (rep != null) {
+            minScore = rep.getInt("min-score", -500);
+            maxScore = rep.getInt("max-score", 500);
+            ConfigurationSection changes = rep.getConfigurationSection("changes");
+            if (changes != null) {
+                for (String key : changes.getKeys(false)) {
+                    ConfigurationSection cs = changes.getConfigurationSection(key);
+                    if (cs != null) {
+                        int min = cs.getInt("min", 0);
+                        int max = cs.getInt("max", 0);
+                        ranges.put(key, new Range(min, max));
+                    }
+                }
+            }
+        }
+    }
+
+    public int computeChange(String key, double value) {
+        Range r = ranges.get(key);
+        if (r == null) return 0;
+        value = Math.max(0.0, Math.min(1.0, value));
+        double diff = r.max - r.min;
+        return (int) Math.round(r.min + diff * value);
+    }
+
+    public boolean hasRange(String key) {
+        return ranges.containsKey(key);
     }
 
     public synchronized void adjustReputation(UUID playerUuid, int delta, String reason, String source, String detailsJson) {
@@ -31,10 +81,12 @@ public class ReputationService {
         delta = Math.max(-100, Math.min(100, delta));
         try (Connection conn = database.getConnection()) {
             ensurePlayer(conn, playerUuid);
-            String updateSql = "UPDATE player_registry SET reputation_score = GREATEST(-100, LEAST(100, reputation_score + ?)) WHERE uuid = ?";
+            String updateSql = "UPDATE player_registry SET reputation_score = GREATEST(?, LEAST(?, reputation_score + ?)) WHERE uuid = ?";
             try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
-                ps.setInt(1, delta);
-                ps.setString(2, playerUuid.toString());
+                ps.setInt(1, minScore);
+                ps.setInt(2, maxScore);
+                ps.setInt(3, delta);
+                ps.setString(4, playerUuid.toString());
                 ps.executeUpdate();
             }
             insertEvent(conn, playerUuid, delta, reason, source, detailsJson);

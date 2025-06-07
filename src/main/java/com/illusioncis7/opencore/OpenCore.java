@@ -38,6 +38,7 @@ public class OpenCore extends JavaPlugin {
         saveResource("gpt.yml", false);
         saveResource("database.yml", false);
         saveResource("config-scan.yml", false);
+        saveResource("reputation.yml", false);
 
         database = new Database(this);
         database.connect();
