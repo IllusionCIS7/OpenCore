@@ -29,6 +29,18 @@ public class VotingService {
     private final GptSuggestionClassifier classifier;
     private final PlanHook planHook;
 
+    public static class VoteWeights {
+        public final int yesWeight;
+        public final int noWeight;
+        public final int requiredWeight;
+
+        public VoteWeights(int yesWeight, int noWeight, int requiredWeight) {
+            this.yesWeight = yesWeight;
+            this.noWeight = noWeight;
+            this.requiredWeight = requiredWeight;
+        }
+    }
+
     public VotingService(JavaPlugin plugin, Database database, GptService gptService,
                          ConfigService configService, RuleService ruleService,
                          ReputationService reputationService, PlanHook planHook) {
@@ -43,10 +55,10 @@ public class VotingService {
         this.classifier = new GptSuggestionClassifier(gptService, database, logger);
     }
 
-    public void submitSuggestion(UUID player, String text) {
+    public int submitSuggestion(UUID player, String text) {
         int id = insertBaseSuggestion(player, text);
         if (id == -1) {
-            return;
+            return -1;
         }
 
         int delta = reputationService.computeChange("suggestion-submitted", 1.0);
@@ -57,6 +69,7 @@ public class VotingService {
         classifier.classify(id, text,
                 () -> mapConfigChange(id, player, text),
                 () -> mapRuleChange(id, player, text));
+        return id;
     }
 
     private int insertBaseSuggestion(UUID player, String text) {
@@ -218,8 +231,100 @@ public class VotingService {
         return list;
     }
 
-    public void castVote(UUID player, int suggestionId, boolean yes) {
-        if (database.getConnection() == null) return;
+    public boolean isSuggestionOpen(int suggestionId) {
+        if (database.getConnection() == null) return false;
+        String sql = "SELECT open FROM suggestions WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, suggestionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to check suggestion state: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public VoteWeights getVoteWeights(int suggestionId) {
+        if (database.getConnection() == null) return new VoteWeights(0, 0, 0);
+
+        int yesWeight = 0;
+        int noWeight = 0;
+        int highRepYes = 0;
+        String voteSql = "SELECT player_uuid, vote_yes, weight FROM votes WHERE suggestion_id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(voteSql)) {
+            ps.setInt(1, suggestionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UUID voter = UUID.fromString(rs.getString(1));
+                    boolean yes = rs.getBoolean(2);
+                    int weight = rs.getInt(3);
+                    if (yes) {
+                        yesWeight += weight;
+                        if (reputationService.getReputation(voter) >= 50) {
+                            highRepYes++;
+                        }
+                    } else {
+                        noWeight += weight;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to tally votes: " + e.getMessage());
+            return new VoteWeights(yesWeight, noWeight, 0);
+        }
+
+        SuggestionType type = SuggestionType.CONFIG_CHANGE;
+        int paramId = 0;
+        double impact = 5.0;
+        String infoSql = "SELECT suggestion_type, parameter_id, gpt_confidence FROM suggestions WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(infoSql)) {
+            ps.setInt(1, suggestionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    type = SuggestionType.valueOf(rs.getString(1));
+                    paramId = rs.getInt(2);
+                    impact = rs.getDouble(3);
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to load suggestion info: " + e.getMessage());
+        }
+
+        if (type == SuggestionType.CONFIG_CHANGE) {
+            String impactSql = "SELECT impact_rating FROM config_params WHERE id = ?";
+            try (Connection conn = database.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(impactSql)) {
+                ps.setInt(1, paramId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        impact = rs.getInt(1);
+                    }
+                }
+            } catch (SQLException e) {
+                logger.warning("Failed to fetch config impact: " + e.getMessage());
+            }
+        }
+
+        int totalActiveWeight = 0;
+        for (UUID active : planHook.getActivePlayers(Duration.ofDays(30))) {
+            int rep = reputationService.getReputation(active);
+            totalActiveWeight += Math.max(1, rep / 10 + 1);
+        }
+        int requiredWeight = Math.max(3, (int) Math.ceil((impact / 10.0) * totalActiveWeight));
+        return new VoteWeights(yesWeight, noWeight, requiredWeight);
+    }
+
+    public boolean castVote(UUID player, int suggestionId, boolean yes) {
+        if (database.getConnection() == null) return false;
+        if (!isSuggestionOpen(suggestionId)) {
+            return false;
+        }
         int rep = reputationService.getReputation(player);
         int weight = Math.max(1, rep / 10 + 1);
         String sql = "INSERT INTO votes (suggestion_id, player_uuid, vote_yes, weight) VALUES (?, ?, ?, ?) " +
@@ -233,9 +338,10 @@ public class VotingService {
             ps.executeUpdate();
         } catch (SQLException e) {
             logger.severe("Failed to cast vote: " + e.getMessage());
-            return;
+            return false;
         }
         evaluateVotes(suggestionId);
+        return true;
     }
 
     private void evaluateVotes(int suggestionId) {
