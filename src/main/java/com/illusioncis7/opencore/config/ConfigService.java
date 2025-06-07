@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.sql.Timestamp;
 
+import com.illusioncis7.opencore.config.ConfigType;
+
 /**
  * Scans configuration files and allows updates of single parameters.
  */
@@ -112,7 +114,7 @@ public class ConfigService {
             return;
         }
 
-        String sql = "INSERT INTO config_params (path, parameter_path, description) VALUES (?, ?, ?) " +
+        String sql = "INSERT INTO config_params (path, parameter_path, description, value_type) VALUES (?, ?, ?, ?) " +
                 "ON DUPLICATE KEY UPDATE path = VALUES(path), description = VALUES(description)";
 
         try (Connection conn = database.getConnection();
@@ -120,6 +122,7 @@ public class ConfigService {
             ps.setString(1, path);
             ps.setString(2, parameter);
             ps.setNull(3, Types.VARCHAR);
+            ps.setString(4, ConfigType.STRING.name());
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("Failed to store config parameter " + parameter + ": " + e.getMessage());
@@ -134,7 +137,7 @@ public class ConfigService {
             return false;
         }
 
-        String query = "SELECT path, parameter_path FROM config_params WHERE id = ?";
+        String query = "SELECT path, parameter_path, value_type, min_value, max_value FROM config_params WHERE id = ?";
 
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
@@ -143,9 +146,21 @@ public class ConfigService {
                 if (rs.next()) {
                     String path = rs.getString(1);
                     String param = rs.getString(2);
+                    String typeStr = rs.getString(3);
+                    int min = rs.getInt(4);
+                    int max = rs.getInt(5);
+                    ConfigType type = ConfigType.STRING;
+                    if (typeStr != null) {
+                        try { type = ConfigType.valueOf(typeStr.toUpperCase()); } catch (IllegalArgumentException ignore) {}
+                    }
+                    Object typed = parseValue(type, newValue);
+                    if (!validateValue(type, typed, min, max)) {
+                        plugin.getLogger().warning("Invalid value for parameter " + id);
+                        return false;
+                    }
                     File file = new File(path);
                     Object oldVal = loadValue(file, param);
-                    boolean ok = updateFile(file, param, newValue);
+                    boolean ok = updateFile(file, param, typed);
                     if (ok) {
                         logChange(id, oldVal, newValue, changedBy);
                     }
@@ -158,7 +173,7 @@ public class ConfigService {
         return false;
     }
 
-    private boolean updateFile(File file, String parameterPath, String value) {
+    private boolean updateFile(File file, String parameterPath, Object value) {
         if (file.getName().toLowerCase().endsWith(".yml")) {
             try {
                 FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
@@ -187,7 +202,7 @@ public class ConfigService {
                         }
                     }
                 }
-                map.put(parameterPath, value);
+                map.put(parameterPath, String.valueOf(value));
                 try (PrintWriter pw = new PrintWriter(new FileWriter(file))) {
                     for (Map.Entry<String, String> entry : map.entrySet()) {
                         if (entry.getValue() == null) {
@@ -203,6 +218,32 @@ public class ConfigService {
             }
         }
         return false;
+    }
+
+    private Object parseValue(ConfigType type, String value) {
+        if (value == null) return null;
+        switch (type) {
+            case BOOLEAN:
+                if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                    return Boolean.parseBoolean(value);
+                }
+                return null;
+            case INTEGER:
+                try { return Integer.parseInt(value); } catch (NumberFormatException e) { return null; }
+            case LIST:
+            case STRING:
+            default:
+                return value;
+        }
+    }
+
+    private boolean validateValue(ConfigType type, Object value, int min, int max) {
+        if (value == null) return false;
+        if (type == ConfigType.INTEGER) {
+            int v = (Integer) value;
+            return v >= min && v <= max;
+        }
+        return true;
     }
 
     private Object loadValue(File file, String parameterPath) {
@@ -275,7 +316,7 @@ public class ConfigService {
     public java.util.List<ConfigParameter> listParameters() {
         java.util.List<ConfigParameter> list = new java.util.ArrayList<>();
         if (database.getConnection() == null) return list;
-        String sql = "SELECT id, path, parameter_path, editable, impact_rating FROM config_params";
+        String sql = "SELECT id, path, parameter_path, editable, impact_rating, value_type FROM config_params";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -288,6 +329,10 @@ public class ConfigService {
                 p.setParameterPath(param);
                 p.setEditable(rs.getBoolean(4));
                 p.setImpactRating(rs.getInt(5));
+                String vt = rs.getString(6);
+                if (vt != null) {
+                    try { p.setValueType(ConfigType.valueOf(vt.toUpperCase())); } catch (IllegalArgumentException ignore) {}
+                }
                 Object val = loadValue(new File(path), param);
                 p.setCurrentValue(val != null ? val.toString() : null);
                 list.add(p);
