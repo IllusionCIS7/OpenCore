@@ -122,4 +122,20 @@ public class ReputationService {
         }
         return list;
     }
+
+    /**
+     * Ensure that a player exists in the registry.
+     * This is used on player login to create the initial entry
+     * with a random alias and reputation score of 0.
+     */
+    public synchronized void registerPlayer(UUID playerUuid) {
+        if (database.getConnection() == null) {
+            return;
+        }
+        try (Connection conn = database.getConnection()) {
+            ensurePlayer(conn, playerUuid);
+        } catch (SQLException e) {
+            logger.severe("Failed to register player: " + e.getMessage());
+        }
+    }
 }
