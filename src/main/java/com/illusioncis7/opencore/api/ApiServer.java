@@ -28,13 +28,15 @@ public class ApiServer {
     private final RuleService ruleService;
     private final Logger logger;
     private HttpServer server;
+    private final boolean exposeReputations;
 
-    public ApiServer(int port, VotingService votingService, ReputationService reputationService,
+    public ApiServer(int port, boolean exposeReputations, VotingService votingService, ReputationService reputationService,
                      RuleService ruleService, Logger logger) throws IOException {
         this.votingService = votingService;
         this.reputationService = reputationService;
         this.ruleService = ruleService;
         this.logger = logger;
+        this.exposeReputations = exposeReputations;
         if (port > 0) {
             server = HttpServer.create(new InetSocketAddress(port), 0);
             registerContexts();
@@ -48,7 +50,9 @@ public class ApiServer {
     private void registerContexts() {
         server.createContext("/api/suggestions", exchange -> handle(exchange, this::writeSuggestions));
         server.createContext("/api/rules", exchange -> handle(exchange, this::writeRules));
-        server.createContext("/api/reputations", exchange -> handle(exchange, this::writeReputations));
+        if (exposeReputations) {
+            server.createContext("/api/reputations", exchange -> handle(exchange, this::writeReputations));
+        }
     }
 
     private interface JsonWriter {

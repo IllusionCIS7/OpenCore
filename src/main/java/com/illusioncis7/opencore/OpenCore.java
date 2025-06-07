@@ -100,6 +100,10 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("editrule")).setExecutor(editRuleCmd);
         getCommand("editrule").setTabCompleter(editRuleCmd);
 
+        com.illusioncis7.opencore.rules.command.RuleHistoryCommand ruleHistCmd = new com.illusioncis7.opencore.rules.command.RuleHistoryCommand(ruleService);
+        Objects.requireNonNull(getCommand("rulehistory")).setExecutor(ruleHistCmd);
+        getCommand("rulehistory").setTabCompleter(ruleHistCmd);
+
         RollbackConfigCommand rollCmd = new RollbackConfigCommand(configService);
         Objects.requireNonNull(getCommand("rollbackconfig")).setExecutor(rollCmd);
         getCommand("rollbackconfig").setTabCompleter(rollCmd);
@@ -150,8 +154,9 @@ public class OpenCore extends JavaPlugin {
                 org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                         new File(getDataFolder(), "api.yml"));
         int port = apiCfg.getInt("port", 0);
+        boolean exposeRep = apiCfg.getBoolean("expose-reputations", true);
         try {
-            apiServer = new com.illusioncis7.opencore.api.ApiServer(port, votingService,
+            apiServer = new com.illusioncis7.opencore.api.ApiServer(port, exposeRep, votingService,
                     reputationService, ruleService, getLogger());
         } catch (Exception e) {
             getLogger().warning("Failed to start API server: " + e.getMessage());
