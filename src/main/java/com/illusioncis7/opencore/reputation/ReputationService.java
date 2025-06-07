@@ -29,6 +29,17 @@ public class ReputationService {
         Range(int min, int max) { this.min = min; this.max = max; }
     }
 
+    /** Simple DTO for listing player reputations. */
+    public static class PlayerReputation {
+        public final UUID uuid;
+        public final int score;
+
+        public PlayerReputation(UUID uuid, int score) {
+            this.uuid = uuid;
+            this.score = score;
+        }
+    }
+
     private final java.util.Map<String, Range> ranges = new java.util.HashMap<>();
 
     public ReputationService(JavaPlugin plugin, Database database) {
@@ -236,6 +247,29 @@ public class ReputationService {
             }
         } catch (SQLException e) {
             logger.severe("Failed to fetch reputation history: " + e.getMessage());
+        }
+        return list;
+    }
+
+    /**
+     * Retrieve all player reputations from the registry.
+     */
+    public synchronized List<PlayerReputation> listReputations() {
+        List<PlayerReputation> list = new ArrayList<>();
+        if (database.getConnection() == null) {
+            return list;
+        }
+        String sql = "SELECT uuid, reputation_score FROM player_registry";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                UUID uuid = UUID.fromString(rs.getString(1));
+                int score = rs.getInt(2);
+                list.add(new PlayerReputation(uuid, score));
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to list reputations: " + e.getMessage());
         }
         return list;
     }

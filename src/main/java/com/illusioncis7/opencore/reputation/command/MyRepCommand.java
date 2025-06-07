@@ -3,7 +3,7 @@ package com.illusioncis7.opencore.reputation.command;
 import com.illusioncis7.opencore.reputation.ReputationEvent;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -11,7 +11,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
-public class MyRepCommand implements CommandExecutor {
+import java.util.Collections;
+
+public class MyRepCommand implements TabExecutor {
     private final ReputationService reputationService;
 
     public MyRepCommand(ReputationService reputationService) {
@@ -37,5 +39,10 @@ public class MyRepCommand implements CommandExecutor {
             sender.sendMessage(time + " - " + ev.reasonSummary + " (" + (ev.change >= 0 ? "+" : "") + ev.change + ")");
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

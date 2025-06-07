@@ -3,11 +3,13 @@ package com.illusioncis7.opencore.voting.command;
 import com.illusioncis7.opencore.OpenCore;
 import com.illusioncis7.opencore.voting.VotingService;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class SuggestCommand implements CommandExecutor {
+import java.util.Collections;
+
+public class SuggestCommand implements TabExecutor {
     private final VotingService votingService;
 
     public SuggestCommand(VotingService votingService) {
@@ -41,5 +43,10 @@ public class SuggestCommand implements CommandExecutor {
             sender.sendMessage("Suggestion submitted with ID " + id + ".");
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

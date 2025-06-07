@@ -2,12 +2,16 @@ package com.illusioncis7.opencore.voting.command;
 
 import com.illusioncis7.opencore.OpenCore;
 import com.illusioncis7.opencore.voting.VotingService;
+import com.illusioncis7.opencore.voting.Suggestion;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class VoteCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class VoteCommand implements TabExecutor {
     private final VotingService votingService;
 
     public VoteCommand(VotingService votingService) {
@@ -53,5 +57,22 @@ public class VoteCommand implements CommandExecutor {
             sender.sendMessage("Invalid id.");
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            java.util.List<String> ids = new ArrayList<>();
+            for (Suggestion s : votingService.getOpenSuggestions()) {
+                ids.add(String.valueOf(s.id));
+            }
+            return ids;
+        } else if (args.length == 2) {
+            java.util.List<String> opts = new ArrayList<>();
+            opts.add("yes");
+            opts.add("no");
+            return opts;
+        }
+        return Collections.emptyList();
     }
 }

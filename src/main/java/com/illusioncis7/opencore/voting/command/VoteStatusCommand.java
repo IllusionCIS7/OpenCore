@@ -4,12 +4,13 @@ import com.illusioncis7.opencore.voting.Suggestion;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.voting.VotingService.VoteWeights;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
+import java.util.Collections;
 
-public class VoteStatusCommand implements CommandExecutor {
+public class VoteStatusCommand implements TabExecutor {
     private final VotingService votingService;
 
     public VoteStatusCommand(VotingService votingService) {
@@ -32,5 +33,10 @@ public class VoteStatusCommand implements CommandExecutor {
             sender.sendMessage("#" + s.id + " - " + title + " -> " + result + (accepted && !change.isEmpty() ? ": " + change : ""));
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

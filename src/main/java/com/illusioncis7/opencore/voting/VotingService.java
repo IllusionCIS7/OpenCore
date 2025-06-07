@@ -28,7 +28,7 @@ public class VotingService {
     private final Logger logger;
     private final GptSuggestionClassifier classifier;
     private final PlanHook planHook;
-    private final String webhookUrl;
+    private String webhookUrl;
     private static final Duration VOTE_LIFETIME = Duration.ofDays(7);
 
     public static class VoteWeights {
@@ -55,7 +55,19 @@ public class VotingService {
         this.planHook = planHook;
         this.logger = plugin.getLogger();
         this.classifier = new GptSuggestionClassifier(gptService, database, logger);
-        this.webhookUrl = plugin.getConfig().getString("discord-webhook-url", "");
+        loadConfig();
+    }
+
+    private void loadConfig() {
+        java.io.File cfgFile = new java.io.File(plugin.getDataFolder(), "voting.yml");
+        org.bukkit.configuration.file.FileConfiguration cfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(cfgFile);
+        this.webhookUrl = cfg.getString("webhook-url", "");
+        if (webhookUrl == null || webhookUrl.isEmpty()) {
+            logger.info("Discord webhook disabled (no webhook-url configured)");
+        } else {
+            logger.info("Discord webhook enabled");
+        }
     }
 
     public int submitSuggestion(UUID player, String text) {

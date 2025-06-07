@@ -3,7 +3,7 @@ package com.illusioncis7.opencore.gpt.command;
 import com.illusioncis7.opencore.gpt.GptResponseHandler;
 import com.illusioncis7.opencore.gpt.GptResponseRecord;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -11,7 +11,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
-public class GptLogCommand implements CommandExecutor {
+import java.util.Collections;
+
+public class GptLogCommand implements TabExecutor {
     private final GptResponseHandler handler;
 
     public GptLogCommand(GptResponseHandler handler) {
@@ -37,5 +39,10 @@ public class GptLogCommand implements CommandExecutor {
             sender.sendMessage(time + " " + prefix + rec.response);
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

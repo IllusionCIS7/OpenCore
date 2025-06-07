@@ -3,12 +3,14 @@ package com.illusioncis7.opencore.config.command;
 import com.illusioncis7.opencore.config.ConfigParameter;
 import com.illusioncis7.opencore.config.ConfigService;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
 
-public class ConfigListCommand implements CommandExecutor {
+import java.util.Collections;
+
+public class ConfigListCommand implements TabExecutor {
     private final ConfigService configService;
 
     public ConfigListCommand(ConfigService configService) {
@@ -28,5 +30,10 @@ public class ConfigListCommand implements CommandExecutor {
                     " editable=" + p.isEditable() + " impact=" + p.getImpactRating());
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }
