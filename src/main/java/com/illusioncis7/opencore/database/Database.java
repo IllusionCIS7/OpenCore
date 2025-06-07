@@ -72,6 +72,34 @@ public class Database {
                     "UNIQUE KEY path_param (path, parameter_path)" +
                     ")";
             stmt.executeUpdate(cfgSql);
+
+            String playerSql = "CREATE TABLE IF NOT EXISTS player_registry (" +
+                    "uuid VARCHAR(36) PRIMARY KEY," +
+                    "alias_id VARCHAR(36) NOT NULL," +
+                    "reputation_score INT DEFAULT 0," +
+                    "reputation_rank VARCHAR(50)" +
+                    ")";
+            stmt.executeUpdate(playerSql);
+
+            String eventSql = "CREATE TABLE IF NOT EXISTS reputation_events (" +
+                    "id VARCHAR(36) PRIMARY KEY," +
+                    "timestamp TIMESTAMP NOT NULL," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "change INT NOT NULL," +
+                    "reason_summary VARCHAR(255)," +
+                    "source_module VARCHAR(50)," +
+                    "details TEXT" +
+                    ")";
+            stmt.executeUpdate(eventSql);
+
+            String guideSql = "CREATE TABLE IF NOT EXISTS reputation_guidelines (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "module VARCHAR(50) NOT NULL," +
+                    "rule VARCHAR(255) NOT NULL," +
+                    "points INT NOT NULL," +
+                    "description TEXT" +
+                    ")";
+            stmt.executeUpdate(guideSql);
         }
     }
 

@@ -4,6 +4,7 @@ import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.logging.ChatLogger;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.config.ConfigService;
+import com.illusioncis7.opencore.reputation.ReputationService;
 import java.io.File;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -13,6 +14,7 @@ public class OpenCore extends JavaPlugin {
     private Database database;
     private GptService gptService;
     private ConfigService configService;
+    private ReputationService reputationService;
 
     public static OpenCore getInstance() {
         return instance;
@@ -29,11 +31,16 @@ public class OpenCore extends JavaPlugin {
         database = new Database(this);
         database.connect();
 
+        reputationService = new ReputationService(this, database);
+
         configService = new ConfigService(this, database);
         configService.scanAndStore(new File(".").getAbsoluteFile());
 
         gptService = new GptService(this, database);
         gptService.init();
+
+        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
+                .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
     }
@@ -58,5 +65,9 @@ public class OpenCore extends JavaPlugin {
 
     public ConfigService getConfigService() {
         return configService;
+    }
+
+    public ReputationService getReputationService() {
+        return reputationService;
     }
 }
