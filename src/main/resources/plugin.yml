@@ -9,6 +9,6 @@ commands:
   suggestions:
     description: List open suggestions
   vote:
-    description: Vote on a suggestion
+    description: Manage votes
   rules:
     description: List server rules

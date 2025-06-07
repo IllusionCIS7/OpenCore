@@ -110,6 +110,7 @@ public class Database {
                     "text TEXT," +
                     "created TIMESTAMP NOT NULL," +
                     "open BOOLEAN DEFAULT 1," +
+                    "short_name VARCHAR(50)," +
                     "suggestion_type ENUM('CONFIG_CHANGE','RULE_CHANGE','MODERATION_REQUEST','FEATURE_REQUEST','BUG_REPORT','EVENT_PROPOSAL','OTHER')," +
                     "gpt_reasoning TEXT," +
                     "gpt_confidence FLOAT," +

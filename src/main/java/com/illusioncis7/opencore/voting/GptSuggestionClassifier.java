@@ -34,6 +34,7 @@ public class GptSuggestionClassifier {
      * @param onRule       callback executed if the suggestion is classified as RULE_CHANGE
      */
     public void classify(int suggestionId, String text, Runnable onConfig, Runnable onRule) {
+        // Expected GPT JSON: {"suggestion_type":"CONFIG_CHANGE","reasoning":"...","confidence":0-1}
         gptService.submitTemplate("suggest_classify", text, null, response -> {
             if (response == null || response.isEmpty()) {
                 handleFailure(suggestionId, "Empty GPT response");

@@ -24,7 +24,7 @@ public class SuggestionsCommand implements CommandExecutor {
         }
         for (Suggestion s : list) {
             String desc = s.description != null ? s.description : "n/a";
-            sender.sendMessage("#" + s.id + " -> param " + s.parameterId + " (" + desc + ") = " + s.newValue + " (" + s.text + ")");
+            sender.sendMessage("#" + s.id + " [" + s.shortName + "] -> param " + s.parameterId + " (" + desc + ") = " + s.newValue + " (" + s.text + ")");
         }
         return true;
     }

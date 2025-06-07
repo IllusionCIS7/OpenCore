@@ -3,6 +3,7 @@ import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.rules.RuleService;
+import com.illusioncis7.opencore.plan.PlanHook;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,13 +37,15 @@ public class VotingServiceTest {
     private RuleService ruleService;
     @Mock
     private ReputationService reputationService;
+    @Mock
+    private PlanHook planHook;
 
     private VotingService service;
 
     @BeforeEach
     public void setup() {
         when(plugin.getLogger()).thenReturn(Logger.getLogger("test"));
-        service = new VotingService(plugin, database, gptService, configService, ruleService, reputationService);
+        service = new VotingService(plugin, database, gptService, configService, ruleService, reputationService, planHook);
     }
 
     @Test
