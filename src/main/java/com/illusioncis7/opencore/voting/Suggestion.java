@@ -8,16 +8,18 @@ public class Suggestion {
     public final UUID playerUuid;
     public final int parameterId;
     public final String newValue;
+    public final String description;
     public final String text;
     public final Instant created;
     public final boolean open;
 
-    public Suggestion(int id, UUID playerUuid, int parameterId, String newValue, String text,
+    public Suggestion(int id, UUID playerUuid, int parameterId, String newValue, String description, String text,
                       Instant created, boolean open) {
         this.id = id;
         this.playerUuid = playerUuid;
         this.parameterId = parameterId;
         this.newValue = newValue;
+        this.description = description;
         this.text = text;
         this.created = created;
         this.open = open;

@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -109,13 +110,14 @@ public class ConfigService {
             return;
         }
 
-        String sql = "INSERT INTO config_params (path, parameter_path) VALUES (?, ?) " +
-                "ON DUPLICATE KEY UPDATE path = VALUES(path)";
+        String sql = "INSERT INTO config_params (path, parameter_path, description) VALUES (?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE path = VALUES(path), description = VALUES(description)";
 
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, path);
             ps.setString(2, parameter);
+            ps.setNull(3, Types.VARCHAR);
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("Failed to store config parameter " + parameter + ": " + e.getMessage());
