@@ -37,6 +37,23 @@ public class RuleService {
         return list;
     }
 
+    public Rule getRule(int id) {
+        if (database.getConnection() == null) return null;
+        String sql = "SELECT id, rule_text FROM server_rules WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Rule(rs.getInt(1), rs.getString(2));
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to load rule: " + e.getMessage());
+        }
+        return null;
+    }
+
     public boolean updateRule(int id, String newText, UUID changedBy, Integer suggestionId) {
         if (database.getConnection() == null) return false;
         String selectSql = "SELECT rule_text FROM server_rules WHERE id = ?";

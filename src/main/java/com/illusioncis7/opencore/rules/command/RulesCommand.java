@@ -17,6 +17,21 @@ public class RulesCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 1) {
+            try {
+                int id = Integer.parseInt(args[0]);
+                Rule r = ruleService.getRule(id);
+                if (r == null) {
+                    sender.sendMessage("Rule not found.");
+                } else {
+                    sender.sendMessage("#" + r.id + ": " + r.text);
+                }
+            } catch (NumberFormatException e) {
+                sender.sendMessage("Invalid id.");
+            }
+            return true;
+        }
+
         List<Rule> rules = ruleService.getRules();
         if (rules.isEmpty()) {
             sender.sendMessage("No rules defined.");
