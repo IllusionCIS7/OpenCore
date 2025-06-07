@@ -76,6 +76,9 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("vote")).setExecutor(new VoteCommand(votingService));
         Objects.requireNonNull(getCommand("rules")).setExecutor(new RulesCommand(ruleService));
         Objects.requireNonNull(getCommand("rollbackconfig")).setExecutor(new RollbackConfigCommand(configService));
+        Objects.requireNonNull(getCommand("myrep")).setExecutor(new com.illusioncis7.opencore.reputation.command.MyRepCommand(reputationService));
+        Objects.requireNonNull(getCommand("gptlog")).setExecutor(new com.illusioncis7.opencore.gpt.command.GptLogCommand(gptResponseHandler));
+        Objects.requireNonNull(getCommand("repinfo")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepInfoCommand(reputationService));
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);

@@ -16,6 +16,8 @@ import java.sql.Types;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import com.illusioncis7.opencore.gpt.GptResponseRecord;
+
 /**
  * Stores GPT responses for offline players and delivers them on login.
  */
@@ -107,5 +109,30 @@ public class GptResponseHandler implements Listener {
         } catch (Exception e) {
             logger.warning("Failed to mark response delivered: " + e.getMessage());
         }
+    }
+
+    /**
+     * Fetch recent GPT responses for a player.
+     */
+    public java.util.List<GptResponseRecord> getRecentResponses(java.util.UUID uuid, int limit) {
+        java.util.List<GptResponseRecord> list = new java.util.ArrayList<>();
+        if (database.getConnection() == null) return list;
+        String sql = "SELECT module, response, created FROM gpt_responses WHERE player_uuid = ? ORDER BY created DESC LIMIT ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uuid.toString());
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String module = rs.getString(1);
+                    String text = rs.getString(2);
+                    java.time.Instant time = rs.getTimestamp(3).toInstant();
+                    list.add(new GptResponseRecord(module, text, time));
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to fetch GPT responses: " + e.getMessage());
+        }
+        return list;
     }
 }
