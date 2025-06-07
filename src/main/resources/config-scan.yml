@@ -1,0 +1,5 @@
+# Configuration for ConfigService
+# Paths are relative to the server root directory
+excluded:
+  - server.properties
+  - plugins/OpenCore

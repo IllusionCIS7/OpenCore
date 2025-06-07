@@ -5,6 +5,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
+
 import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,10 +24,16 @@ public class ConfigService {
 
     private final JavaPlugin plugin;
     private final Database database;
+    private final Set<String> excluded = new HashSet<>();
+    private Path serverRoot;
 
     public ConfigService(JavaPlugin plugin, Database database) {
         this.plugin = plugin;
         this.database = database;
+
+        File cfgFile = new File(plugin.getDataFolder(), "config-scan.yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(cfgFile);
+        this.excluded.addAll(config.getStringList("excluded"));
     }
 
     /**
@@ -35,19 +45,35 @@ public class ConfigService {
             return;
         }
 
-        if (root.isDirectory()) {
-            File[] files = root.listFiles();
+        this.serverRoot = root.getAbsoluteFile().toPath();
+        scanInternal(root.getAbsoluteFile());
+    }
+
+    private void scanInternal(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+
+        String relative = serverRoot.relativize(file.getAbsoluteFile().toPath()).toString().replace(File.separatorChar, '/');
+        for (String ex : excluded) {
+            if (relative.equals(ex) || relative.startsWith(ex + "/")) {
+                return;
+            }
+        }
+
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
             if (files != null) {
-                for (File file : files) {
-                    scanAndStore(file);
+                for (File child : files) {
+                    scanInternal(child);
                 }
             }
         } else {
-            String name = root.getName().toLowerCase();
+            String name = file.getName().toLowerCase();
             if (name.endsWith(".yml")) {
-                storeYaml(root);
+                storeYaml(file);
             } else if (name.endsWith(".conf")) {
-                storeConf(root);
+                storeConf(file);
             }
         }
     }
