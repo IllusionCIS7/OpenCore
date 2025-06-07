@@ -5,6 +5,7 @@ import com.illusioncis7.opencore.logging.ChatLogger;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.reputation.ReputationService;
+import com.illusioncis7.opencore.reputation.PlayerJoinListener;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.voting.command.SuggestCommand;
 import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
@@ -53,6 +54,7 @@ public class OpenCore extends JavaPlugin {
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger()), this);
     }
 
     @Override
