@@ -28,6 +28,7 @@ public class VotingService {
     private final Logger logger;
     private final GptSuggestionClassifier classifier;
     private final PlanHook planHook;
+    private final String webhookUrl;
 
     public static class VoteWeights {
         public final int yesWeight;
@@ -53,6 +54,7 @@ public class VotingService {
         this.planHook = planHook;
         this.logger = plugin.getLogger();
         this.classifier = new GptSuggestionClassifier(gptService, database, logger);
+        this.webhookUrl = plugin.getConfig().getString("discord-webhook-url", "");
     }
 
     public int submitSuggestion(UUID player, String text) {
@@ -68,7 +70,8 @@ public class VotingService {
 
         classifier.classify(id, text,
                 () -> mapConfigChange(id, player, text),
-                () -> mapRuleChange(id, player, text));
+                () -> mapRuleChange(id, player, text),
+                type -> postWebhook(id, type, text));
         return id;
     }
 
@@ -496,5 +499,28 @@ public class VotingService {
             logger.warning("Failed to count implementations: " + e.getMessage());
         }
         return 0;
+    }
+
+    private void postWebhook(int id, SuggestionType type, String text) {
+        if (webhookUrl == null || webhookUrl.isEmpty()) return;
+        try {
+            org.json.JSONObject embed = new org.json.JSONObject();
+            embed.put("title", "Suggestion #" + id);
+            embed.put("description", text);
+            embed.put("footer", new org.json.JSONObject().put("text", type.name()));
+            org.json.JSONArray arr = new org.json.JSONArray();
+            arr.put(embed);
+            org.json.JSONObject payload = new org.json.JSONObject();
+            payload.put("embeds", arr);
+
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(webhookUrl))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload.toString()))
+                    .build();
+            java.net.http.HttpClient.newHttpClient().sendAsync(req, java.net.http.HttpResponse.BodyHandlers.discarding());
+        } catch (Exception e) {
+            logger.warning("Failed to send webhook: " + e.getMessage());
+        }
     }
 }

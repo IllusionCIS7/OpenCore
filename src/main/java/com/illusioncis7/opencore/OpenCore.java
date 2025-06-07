@@ -15,6 +15,8 @@ import com.illusioncis7.opencore.voting.command.VoteCommand;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.rules.command.RulesCommand;
 import com.illusioncis7.opencore.config.command.RollbackConfigCommand;
+import com.illusioncis7.opencore.config.command.ConfigListCommand;
+import com.illusioncis7.opencore.admin.StatusCommand;
 import com.illusioncis7.opencore.plan.PlanHook;
 import java.io.File;
 import java.util.Objects;
@@ -80,6 +82,8 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("gptlog")).setExecutor(new com.illusioncis7.opencore.gpt.command.GptLogCommand(gptResponseHandler));
         Objects.requireNonNull(getCommand("repinfo")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepInfoCommand(reputationService));
         Objects.requireNonNull(getCommand("repchange")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepChangeCommand(reputationService));
+        Objects.requireNonNull(getCommand("status")).setExecutor(new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService));
+        Objects.requireNonNull(getCommand("configlist")).setExecutor(new com.illusioncis7.opencore.config.command.ConfigListCommand(configService));
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);

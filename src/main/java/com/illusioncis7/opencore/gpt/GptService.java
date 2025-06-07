@@ -38,6 +38,9 @@ public class GptService {
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private static final long COOLDOWN_MS = TimeUnit.MINUTES.toMillis(1);
 
+    /** Duration of the last GPT response in milliseconds. */
+    private volatile long lastResponseMs = -1;
+
     private String apiKey;
     private int intervalSeconds;
     private boolean enabled;
@@ -69,6 +72,13 @@ public class GptService {
 
     public void shutdown() {
         queue.clear();
+    }
+
+    /**
+     * Duration of the most recent GPT request in milliseconds or -1 if none.
+     */
+    public long getLastResponseDuration() {
+        return lastResponseMs;
     }
 
     public void submitRequest(String prompt, UUID playerUuid, Consumer<String> callback) {
@@ -131,6 +141,7 @@ public class GptService {
 
     private void sendRequest(GptRequest request, int attempt) {
         plugin.getLogger().info("Processing GPT request " + request.requestId + " (attempt " + attempt + ")");
+        long start = System.currentTimeMillis();
         logRequest(request);
 
         JSONObject payload = new JSONObject();
@@ -180,6 +191,7 @@ public class GptService {
                     }
 
                     logResponse(request.requestId, answer);
+                    lastResponseMs = System.currentTimeMillis() - start;
                     if (request.callback != null) {
                         request.callback.accept(answer);
                     }

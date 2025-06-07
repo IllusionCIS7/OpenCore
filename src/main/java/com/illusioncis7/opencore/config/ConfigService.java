@@ -268,5 +268,34 @@ public class ConfigService {
         }
         return false;
     }
+
+    /**
+     * Fetch all configuration parameters with their current value.
+     */
+    public java.util.List<ConfigParameter> listParameters() {
+        java.util.List<ConfigParameter> list = new java.util.ArrayList<>();
+        if (database.getConnection() == null) return list;
+        String sql = "SELECT id, path, parameter_path, editable, impact_rating FROM config_params";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                ConfigParameter p = new ConfigParameter();
+                p.setId(rs.getInt(1));
+                String path = rs.getString(2);
+                String param = rs.getString(3);
+                p.setPath(path);
+                p.setParameterPath(param);
+                p.setEditable(rs.getBoolean(4));
+                p.setImpactRating(rs.getInt(5));
+                Object val = loadValue(new File(path), param);
+                p.setCurrentValue(val != null ? val.toString() : null);
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to load config parameters: " + e.getMessage());
+        }
+        return list;
+    }
 }
 

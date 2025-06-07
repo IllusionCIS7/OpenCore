@@ -22,3 +22,7 @@ commands:
     description: Show reputation info for a player
   repchange:
     description: Show details for a reputation change event
+  status:
+    description: Show plugin status
+  configlist:
+    description: List configurable parameters

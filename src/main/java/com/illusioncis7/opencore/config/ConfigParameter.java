@@ -11,6 +11,7 @@ public class ConfigParameter {
     private boolean editable;
     private String impactCategory;
     private int impactRating = 5;
+    private String currentValue;
 
     public ConfigParameter() {}
 
@@ -97,6 +98,14 @@ public class ConfigParameter {
 
     public void setImpactRating(int impactRating) {
         this.impactRating = impactRating;
+    }
+
+    public String getCurrentValue() {
+        return currentValue;
+    }
+
+    public void setCurrentValue(String currentValue) {
+        this.currentValue = currentValue;
     }
 
     /**
