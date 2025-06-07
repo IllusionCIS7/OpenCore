@@ -5,6 +5,10 @@ import com.illusioncis7.opencore.logging.ChatLogger;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.reputation.ReputationService;
+import com.illusioncis7.opencore.voting.VotingService;
+import com.illusioncis7.opencore.voting.command.SuggestCommand;
+import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
+import com.illusioncis7.opencore.voting.command.VoteCommand;
 import java.io.File;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -15,6 +19,7 @@ public class OpenCore extends JavaPlugin {
     private GptService gptService;
     private ConfigService configService;
     private ReputationService reputationService;
+    private VotingService votingService;
 
     public static OpenCore getInstance() {
         return instance;
@@ -38,6 +43,11 @@ public class OpenCore extends JavaPlugin {
 
         gptService = new GptService(this, database);
         gptService.init();
+
+        votingService = new VotingService(this, database, gptService, configService, reputationService);
+        getCommand("suggest").setExecutor(new SuggestCommand(votingService));
+        getCommand("suggestions").setExecutor(new SuggestionsCommand(votingService));
+        getCommand("vote").setExecutor(new VoteCommand(votingService));
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
@@ -69,5 +79,9 @@ public class OpenCore extends JavaPlugin {
 
     public ReputationService getReputationService() {
         return reputationService;
+    }
+
+    public VotingService getVotingService() {
+        return votingService;
     }
 }
