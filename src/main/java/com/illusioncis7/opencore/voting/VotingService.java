@@ -54,7 +54,7 @@ public class VotingService {
         this.reputationService = reputationService;
         this.planHook = planHook;
         this.logger = plugin.getLogger();
-        this.classifier = new GptSuggestionClassifier(gptService, database, logger);
+        this.classifier = new GptSuggestionClassifier(gptService, database, ruleService, logger);
         loadConfig();
     }
 
@@ -146,7 +146,10 @@ public class VotingService {
     }
 
     private void mapRuleChange(int suggestionId, UUID player, String text) {
-        gptService.submitTemplate("rule_map", text, player, response -> {
+        java.util.Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("s", text);
+        vars.put("rules", joinRules());
+        gptService.submitPolicyRequest("rule_map", vars, player, response -> {
             if (response == null) {
                 logger.warning("GPT mapping failed for rule suggestion: " + text);
                 storeMappingError(suggestionId, "GPT returned no response");
@@ -184,6 +187,14 @@ public class VotingService {
         } catch (SQLException e) {
             logger.warning("Failed to store rule info: " + e.getMessage());
         }
+    }
+
+    private String joinRules() {
+        StringBuilder sb = new StringBuilder();
+        for (com.illusioncis7.opencore.rules.Rule r : ruleService.getRules()) {
+            sb.append(r.text).append("\n");
+        }
+        return sb.toString();
     }
 
     private boolean isEditableParam(int paramId) {

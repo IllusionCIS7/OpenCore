@@ -5,6 +5,7 @@ import com.illusioncis7.opencore.logging.ChatLogger;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.gpt.GptQueueManager;
 import com.illusioncis7.opencore.gpt.GptResponseHandler;
+import com.illusioncis7.opencore.gpt.PolicyService;
 import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.reputation.PlayerJoinListener;
@@ -35,6 +36,7 @@ public class OpenCore extends JavaPlugin {
     private GptResponseHandler gptResponseHandler;
     private ConfigService configService;
     private RuleService ruleService;
+    private PolicyService policyService;
     private ReputationService reputationService;
     private VotingService votingService;
     private PlanHook planHook;
@@ -67,9 +69,14 @@ public class OpenCore extends JavaPlugin {
 
         ruleService = new RuleService(this, database);
 
-        setupManager = new com.illusioncis7.opencore.setup.SetupManager(this, ruleService, configService);
+        policyService = new PolicyService(this, database);
 
-        gptService = new GptService(this, database);
+        setupManager = new com.illusioncis7.opencore.setup.SetupManager(this, ruleService, configService);
+        if (setupManager.isSetupActive()) {
+            policyService.ensureDefaults();
+        }
+
+        gptService = new GptService(this, database, policyService);
         gptService.init();
         gptResponseHandler = new GptResponseHandler(this, database);
         gptQueueManager = new GptQueueManager(this, gptService, gptResponseHandler);
@@ -140,7 +147,7 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
         getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
-        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
+        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, ruleService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         new BukkitRunnable() {
