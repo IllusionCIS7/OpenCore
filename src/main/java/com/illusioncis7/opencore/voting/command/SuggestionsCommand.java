@@ -27,7 +27,12 @@ public class SuggestionsCommand implements CommandExecutor {
             VoteWeights w = votingService.getVoteWeights(s.id);
             int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
             String title = (s.description != null && !s.description.isEmpty()) ? s.description : s.text;
-            sender.sendMessage("#" + s.id + " - " + title + " [" + w.yesWeight + "/" + w.requiredWeight + " yes] " + remaining + " votes needed");
+            String progress = w.yesWeight + "/" + w.requiredWeight + " yes";
+            if (remaining > 0) {
+                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] " + remaining + " votes needed");
+            } else {
+                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] quorum reached");
+            }
         }
         return true;
     }

@@ -20,3 +20,5 @@ commands:
     description: Show recent GPT responses
   repinfo:
     description: Show reputation info for a player
+  repchange:
+    description: Show details for a reputation change event

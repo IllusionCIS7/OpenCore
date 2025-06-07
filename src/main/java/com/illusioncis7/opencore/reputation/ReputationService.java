@@ -96,6 +96,71 @@ public class ReputationService {
         }
     }
 
+    /**
+     * Set a player's reputation directly.
+     *
+     * @param playerUuid player id
+     * @param newValue   new reputation value
+     */
+    public synchronized void setReputation(UUID playerUuid, int newValue) {
+        if (database.getConnection() == null) {
+            return;
+        }
+        newValue = Math.max(minScore, Math.min(maxScore, newValue));
+        try (Connection conn = database.getConnection()) {
+            ensurePlayer(conn, playerUuid);
+            String sql = "UPDATE player_registry SET reputation_score = ? WHERE uuid = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, newValue);
+                ps.setString(2, playerUuid.toString());
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to set reputation: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Apply inactivity decay based on last active time.
+     *
+     * @param playerUuid player id
+     * @param lastActive last seen timestamp
+     */
+    public void applyInactivityDecay(UUID playerUuid, java.time.Instant lastActive) {
+        if (lastActive == null) return;
+        long days = java.time.Duration.between(lastActive, java.time.Instant.now()).toDays();
+        if (days <= 14) return;
+        int weeks = (int) ((days - 14) / 7);
+        if (weeks <= 0) return;
+        adjustReputation(playerUuid, -weeks, "inactivity", "system", null);
+    }
+
+    /**
+     * Fetch a specific reputation event.
+     */
+    public synchronized ReputationEvent getEvent(UUID eventId) {
+        if (database.getConnection() == null) return null;
+        String sql = "SELECT timestamp, player_uuid, change, reason_summary, source_module, details FROM reputation_events WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, eventId.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    java.time.Instant ts = rs.getTimestamp(1).toInstant();
+                    UUID player = UUID.fromString(rs.getString(2));
+                    int change = rs.getInt(3);
+                    String reason = rs.getString(4);
+                    String source = rs.getString(5);
+                    String details = rs.getString(6);
+                    return new ReputationEvent(eventId, ts, player, change, reason, source, details);
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to fetch reputation event: " + e.getMessage());
+        }
+        return null;
+    }
+
     private void ensurePlayer(Connection conn, UUID playerUuid) throws SQLException {
         String checkSql = "SELECT uuid FROM player_registry WHERE uuid = ?";
         try (PreparedStatement ps = conn.prepareStatement(checkSql)) {
