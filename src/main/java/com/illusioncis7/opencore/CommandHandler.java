@@ -1,8 +1,11 @@
 package com.illusioncis7.opencore;
 
+import com.illusioncis7.opencore.gpt.GPTService;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
+import java.util.Objects;
 
 public class CommandHandler implements CommandExecutor {
     private final OpenCore plugin;
@@ -15,8 +18,8 @@ public class CommandHandler implements CommandExecutor {
     }
 
     public void register() {
-        plugin.getCommand("gpttest").setExecutor(this);
-        plugin.getCommand("opencorereload").setExecutor(this);
+        Objects.requireNonNull(plugin.getCommand("gpttest")).setExecutor(this);
+        Objects.requireNonNull(plugin.getCommand("opencorereload")).setExecutor(this);
     }
 
     @Override

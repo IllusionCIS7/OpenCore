@@ -1,4 +1,6 @@
-package com.illusioncis7.opencore;
+package com.illusioncis7.opencore.gpt;
+
+import com.illusioncis7.opencore.OpenCore;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;

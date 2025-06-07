@@ -1,5 +1,6 @@
 package com.illusioncis7.opencore;
 
+import com.illusioncis7.opencore.gpt.GPTService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class OpenCore extends JavaPlugin {
