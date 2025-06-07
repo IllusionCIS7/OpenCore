@@ -340,7 +340,7 @@ public class VotingService {
         if (value == null) return;
         boolean updated = false;
         if (type == SuggestionType.CONFIG_CHANGE) {
-            updated = configService.updateParameter(paramId, value);
+            updated = configService.updateParameter(paramId, value, player);
         } else if (type == SuggestionType.RULE_CHANGE) {
             updated = ruleService.updateRule(paramId, value, player, suggestionId);
         }

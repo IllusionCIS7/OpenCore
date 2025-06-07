@@ -63,8 +63,8 @@ public class Database {
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "path VARCHAR(255) NOT NULL," +
                     "parameter_path VARCHAR(255) NOT NULL," +
-                    "min_value VARCHAR(255)," +
-                    "max_value VARCHAR(255)," +
+                    "min_value INT," +
+                    "max_value INT," +
                     "recommended_range VARCHAR(255)," +
                     "editable BOOLEAN DEFAULT 0," +
                     "impact_category VARCHAR(50)," +
@@ -133,6 +133,16 @@ public class Database {
                     ")";
             stmt.executeUpdate(promptSql);
 
+            String responseSql = "CREATE TABLE IF NOT EXISTS gpt_responses (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "module VARCHAR(50)," +
+                    "response TEXT NOT NULL," +
+                    "created TIMESTAMP NOT NULL," +
+                    "delivered BOOLEAN DEFAULT 0" +
+                    ")";
+            stmt.executeUpdate(responseSql);
+
             String rulesSql = "CREATE TABLE IF NOT EXISTS server_rules (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "rule_text TEXT NOT NULL" +
@@ -149,6 +159,16 @@ public class Database {
                     "suggestion_id INT" +
                     ")";
             stmt.executeUpdate(ruleLogSql);
+
+            String cfgHistSql = "CREATE TABLE IF NOT EXISTS config_change_history (" +
+                    "change_id VARCHAR(36) PRIMARY KEY," +
+                    "player_uuid VARCHAR(36)," +
+                    "param_key VARCHAR(255) NOT NULL," +
+                    "old_value TEXT," +
+                    "new_value TEXT," +
+                    "changed_at TIMESTAMP NOT NULL" +
+                    ")";
+            stmt.executeUpdate(cfgHistSql);
         }
     }
 

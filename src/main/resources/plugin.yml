@@ -12,3 +12,5 @@ commands:
     description: Vote on a suggestion
   rules:
     description: List server rules
+  rollbackconfig:
+    description: Roll back a configuration change
