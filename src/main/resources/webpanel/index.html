@@ -36,13 +36,26 @@ th,td{border:1px solid #ccc;padding:4px 8px;}
 </table>
 <button onclick="saveConfigs()">Speichern</button>
 </div>
+<div id="flags" class="hidden">
+<h2>Chat-Flags</h2>
+<table id="flagTable">
+<thead><tr><th>Code</th><th>Beschreibung</th><th>Min</th><th>Max</th><th>Aktiv</th></tr></thead>
+<tbody></tbody>
+</table>
+<input id="flagCode" placeholder="Code"/>
+<input id="flagDesc" placeholder="Beschreibung"/>
+<input id="flagMin" placeholder="Min"/>
+<input id="flagMax" placeholder="Max"/>
+<button onclick="addFlag()">Hinzufügen</button>
+<button onclick="saveFlags()">Speichern</button>
+</div>
 <script>
 async function fetchJson(url,opt){const r=await fetch(url,opt);return await r.json();}
 async function loadStatus(){
  const data=await fetchJson('/setup/status');
  if(!data.setupActive){document.getElementById('status').innerText='Setup abgeschlossen';return;}
  document.getElementById('status').classList.add('hidden');
- document.querySelectorAll('#overview,#rules,#configs').forEach(e=>e.classList.remove('hidden'));
+ document.querySelectorAll('#overview,#rules,#configs,#flags').forEach(e=>e.classList.remove('hidden'));
  const rules=await fetchJson('/setup/rules');
  document.getElementById('ruleCount').innerText=rules.rules.length;
  const list=document.getElementById('ruleList');
@@ -53,9 +66,15 @@ async function loadStatus(){
  const body=document.querySelector('#cfgTable tbody');
  body.innerHTML='';
  cfg.parameters.forEach(p=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+p.name+'</td><td>'+p.type+'</td><td>'+p.value+'</td><td>'+p.min+'</td><td>'+p.max+'</td><td>'+p.impact+'</td><td><input data-id="'+p.id+'" value="'+(p.value||'')+'"></td>';body.appendChild(tr);});
+ const flags=await fetchJson('/setup/chatflags');
+ const fbody=document.querySelector('#flagTable tbody');
+ fbody.innerHTML='';
+ flags.flags.forEach(f=>{const tr=document.createElement('tr');tr.dataset.code=f.code;tr.innerHTML='<td>'+f.code+'</td><td><input value="'+(f.description||'')+'"></td><td><input value="'+f.min+'"></td><td><input value="'+f.max+'"></td><td><input type="checkbox" '+(f.active?'checked':'')+'></td>';fbody.appendChild(tr);});
 }
 async function addRule(){const text=document.getElementById('ruleText').value;const cat=document.getElementById('ruleCat').value; if(!text)return; await fetch('/setup/rules/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,category:cat})});loadStatus();}
 async function saveConfigs(){const inputs=document.querySelectorAll('#cfgTable tbody input'); for(const i of inputs){await fetch('/setup/configs/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:i.dataset.id,value:i.value})});}loadStatus();}
+async function addFlag(){const code=document.getElementById('flagCode').value;const desc=document.getElementById('flagDesc').value;const min=document.getElementById('flagMin').value;const max=document.getElementById('flagMax').value; if(!code)return; await fetch('/setup/chatflags/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,description:desc,min:parseInt(min),max:parseInt(max)})});loadStatus();}
+async function saveFlags(){const rows=document.querySelectorAll('#flagTable tbody tr'); for(const r of rows){const c=r.dataset.code;const inp=r.querySelectorAll('input');await fetch('/setup/chatflags/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c,description:inp[0].value,min:parseInt(inp[1].value),max:parseInt(inp[2].value),active:inp[3].checked})});}loadStatus();}
 async function completeSetup(){await fetch('/setup/complete',{method:'POST'});alert('Setup abgeschlossen');loadStatus();}
 loadStatus();
 </script>

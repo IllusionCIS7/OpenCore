@@ -70,12 +70,12 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                 JSONArray arr = obj.optJSONArray("evaluations");
                 if (arr == null) return;
                 Map<String, ReputationFlag> map = flagService.getFlagMap();
+                java.util.Map<UUID, java.util.List<JSONObject>> perPlayer = new java.util.HashMap<>();
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject item = arr.getJSONObject(i);
                     String alias = item.getString("player");
                     String flag = item.getString("flag");
                     int change = item.getInt("change");
-                    String reason = item.optString("reason", "chat analysis");
                     ReputationFlag def = map.get(flag);
                     if (def == null) {
                         logger.warning("Unknown flag " + flag);
@@ -87,7 +87,24 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                     }
                     UUID playerUuid = resolveAlias(alias);
                     if (playerUuid == null) continue;
-                    reputationService.adjustReputation(playerUuid, change, reason, "chat", item.toString());
+                    perPlayer.computeIfAbsent(playerUuid, k -> new java.util.ArrayList<>()).add(item);
+                }
+
+                java.util.Set<UUID> affected = perPlayer.keySet();
+                logAnalysis(data.toString(), response, affected);
+
+                for (UUID uuid : perPlayer.keySet()) {
+                    int total = 0;
+                    for (JSONObject it : perPlayer.get(uuid)) {
+                        total += it.getInt("change");
+                    }
+                    int maxGain = reputationService.getMaxGainPerAnalysis();
+                    if (total > 0 && total > maxGain) {
+                        total = maxGain;
+                    }
+                    total = Math.max(-100, Math.min(100, total));
+                    reputationService.adjustReputation(uuid, total, "chat analysis", "chat",
+                            new JSONArray(perPlayer.get(uuid)).toString());
                 }
             } catch (Exception e) {
                 logger.warning("Failed to parse GPT chat analysis: " + e.getMessage());
@@ -171,6 +188,22 @@ public class ChatAnalyzerTask extends BukkitRunnable {
             logger.warning("Failed to fetch alias: " + e.getMessage());
         }
         return null;
+    }
+
+    private void logAnalysis(String chatlog, String json, java.util.Set<UUID> players) {
+        if (database.getConnection() == null) return;
+        String sql = "INSERT INTO chat_analysis_log (timestamp, chatlog, json, betroffene_spieler) VALUES (?, ?, ?, ?)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            ps.setString(2, chatlog);
+            ps.setString(3, json);
+            String joined = String.join(",", players.stream().map(UUID::toString).toList());
+            ps.setString(4, joined);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            logger.warning("Failed to log chat analysis: " + e.getMessage());
+        }
     }
 
     private static class ChatMessage {

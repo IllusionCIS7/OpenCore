@@ -73,6 +73,9 @@ public class ApiServer {
         server.createContext("/setup/configs", this::handleConfigsGet);
         server.createContext("/setup/configs/update", this::handleUpdateConfig);
         server.createContext("/setup/complete", this::handleComplete);
+        server.createContext("/setup/chatflags", this::handleFlagsGet);
+        server.createContext("/setup/chatflags/add", this::handleAddFlag);
+        server.createContext("/setup/chatflags/update", this::handleUpdateFlag);
 
         server.createContext("/webpanel", this::handleStaticFiles);
         server.createContext("/webpanel/", this::handleStaticFiles);
@@ -209,6 +212,47 @@ public class ApiServer {
         String value = req.optString("value", null);
         if (id <= 0 || value == null) { ex.sendResponseHeaders(400, -1); return; }
         boolean ok = configService.updateParameter(id, value, null);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleFlagsGet(HttpExchange ex) throws IOException {
+        if (!allowSetup(ex, false)) return;
+        JSONArray arr = new JSONArray();
+        for (ReputationFlag f : chatFlagService.listFlags()) {
+            JSONObject o = new JSONObject();
+            o.put("code", f.code);
+            o.put("description", f.description);
+            o.put("min", f.minChange);
+            o.put("max", f.maxChange);
+            o.put("active", f.active);
+            arr.put(o);
+        }
+        writeJson(ex, new JSONObject().put("flags", arr));
+    }
+
+    private void handleAddFlag(HttpExchange ex) throws IOException {
+        if (!allowSetup(ex, true)) return;
+        JSONObject req = readJson(ex);
+        String code = req.optString("code", null);
+        if (code == null) { ex.sendResponseHeaders(400, -1); return; }
+        String desc = req.optString("description", "");
+        int min = req.optInt("min", 0);
+        int max = req.optInt("max", 0);
+        boolean active = req.optBoolean("active", true);
+        boolean ok = chatFlagService.createFlag(code, desc, min, max, active);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleUpdateFlag(HttpExchange ex) throws IOException {
+        if (!allowSetup(ex, true)) return;
+        JSONObject req = readJson(ex);
+        String code = req.optString("code", null);
+        if (code == null) { ex.sendResponseHeaders(400, -1); return; }
+        String desc = req.optString("description", "");
+        int min = req.optInt("min", 0);
+        int max = req.optInt("max", 0);
+        boolean active = req.optBoolean("active", true);
+        boolean ok = chatFlagService.updateFlag(code, desc, min, max, active);
         writeJson(ex, new JSONObject().put("success", ok));
     }
 

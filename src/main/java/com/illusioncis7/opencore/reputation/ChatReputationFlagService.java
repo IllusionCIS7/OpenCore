@@ -123,4 +123,42 @@ public class ChatReputationFlagService {
         }
         return false;
     }
+
+    /** Create a new flag. */
+    public boolean createFlag(String code, String desc, int min, int max, boolean active) {
+        if (database.getConnection() == null) return false;
+        String sql = "INSERT INTO chat_reputation_flags (code, description, min_change, max_change, active, last_updated) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, code);
+            ps.setString(2, desc);
+            ps.setInt(3, min);
+            ps.setInt(4, max);
+            ps.setBoolean(5, active);
+            ps.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            logger.warning("Failed to create reputation flag: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /** Update full flag record. */
+    public boolean updateFlag(String code, String desc, int min, int max, boolean active) {
+        if (database.getConnection() == null) return false;
+        String sql = "UPDATE chat_reputation_flags SET description = ?, min_change = ?, max_change = ?, active = ?, last_updated = ? WHERE code = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, desc);
+            ps.setInt(2, min);
+            ps.setInt(3, max);
+            ps.setBoolean(4, active);
+            ps.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
+            ps.setString(6, code);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            logger.warning("Failed to update reputation flag: " + e.getMessage());
+        }
+        return false;
+    }
 }
