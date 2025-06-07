@@ -39,6 +39,7 @@ public class OpenCore extends JavaPlugin {
     private VotingService votingService;
     private PlanHook planHook;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
+    private com.illusioncis7.opencore.setup.SetupManager setupManager;
 
     public static OpenCore getInstance() {
         return instance;
@@ -54,6 +55,7 @@ public class OpenCore extends JavaPlugin {
         saveResource("reputation.yml", false);
         saveResource("voting.yml", false);
         saveResource("api.yml", false);
+        saveResource("webpanel/index.html", false);
 
         database = new Database(this);
         database.connect();
@@ -64,6 +66,8 @@ public class OpenCore extends JavaPlugin {
         configService.scanAndStore(new File(".").getAbsoluteFile());
 
         ruleService = new RuleService(this, database);
+
+        setupManager = new com.illusioncis7.opencore.setup.SetupManager(this, ruleService, configService);
 
         gptService = new GptService(this, database);
         gptService.init();
@@ -157,7 +161,7 @@ public class OpenCore extends JavaPlugin {
         boolean exposeRep = apiCfg.getBoolean("expose-reputations", true);
         try {
             apiServer = new com.illusioncis7.opencore.api.ApiServer(port, exposeRep, votingService,
-                    reputationService, ruleService, getLogger());
+                    reputationService, ruleService, configService, setupManager, getLogger());
         } catch (Exception e) {
             getLogger().warning("Failed to start API server: " + e.getMessage());
         }
@@ -201,5 +205,9 @@ public class OpenCore extends JavaPlugin {
 
     public VotingService getVotingService() {
         return votingService;
+    }
+
+    public com.illusioncis7.opencore.setup.SetupManager getSetupManager() {
+        return setupManager;
     }
 }

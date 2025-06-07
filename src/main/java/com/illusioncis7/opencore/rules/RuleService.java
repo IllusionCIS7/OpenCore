@@ -25,6 +25,49 @@ public class RuleService {
         this.logger = plugin.getLogger();
     }
 
+    /**
+     * Return the number of stored rules.
+     */
+    public int getRuleCount() {
+        if (database.getConnection() == null) return 0;
+        String sql = "SELECT COUNT(*) FROM server_rules";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to count rules: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Insert a new rule into the database.
+     *
+     * @return the created Rule or null on failure
+     */
+    public Rule addRule(String text, String category) {
+        if (database.getConnection() == null) return null;
+        String sql = "INSERT INTO server_rules (rule_text, category) VALUES (?, ?)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, text);
+            ps.setString(2, category);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int id = rs.getInt(1);
+                    return new Rule(id, text, category);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to add rule: " + e.getMessage());
+        }
+        return null;
+    }
+
     public List<Rule> getRules() {
         List<Rule> list = new ArrayList<>();
         if (database.getConnection() == null) return list;

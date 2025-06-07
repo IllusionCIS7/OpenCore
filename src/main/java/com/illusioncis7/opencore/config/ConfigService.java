@@ -342,5 +342,18 @@ public class ConfigService {
         }
         return list;
     }
+
+    /**
+     * Count parameters that currently have a value in their underlying files.
+     */
+    public int countParametersWithValue() {
+        int count = 0;
+        for (ConfigParameter p : listParameters()) {
+            if (p.getCurrentValue() != null) {
+                count++;
+            }
+        }
+        return count;
+    }
 }
 
