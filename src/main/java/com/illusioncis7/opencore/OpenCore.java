@@ -14,6 +14,8 @@ import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.rules.command.RulesCommand;
 import com.illusioncis7.opencore.plan.PlanHook;
 import java.io.File;
+import java.util.Objects;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class OpenCore extends JavaPlugin {
@@ -61,10 +63,10 @@ public class OpenCore extends JavaPlugin {
         }
 
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
-        getCommand("suggest").setExecutor(new SuggestCommand(votingService));
-        getCommand("suggestions").setExecutor(new SuggestionsCommand(votingService));
-        getCommand("vote").setExecutor(new VoteCommand(votingService));
-        getCommand("rules").setExecutor(new RulesCommand(ruleService));
+        Objects.requireNonNull(getCommand("suggest")).setExecutor(new SuggestCommand(votingService));
+        Objects.requireNonNull(getCommand("suggestions")).setExecutor(new SuggestionsCommand(votingService));
+        Objects.requireNonNull(getCommand("vote")).setExecutor(new VoteCommand(votingService));
+        Objects.requireNonNull(getCommand("rules")).setExecutor(new RulesCommand(ruleService));
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
