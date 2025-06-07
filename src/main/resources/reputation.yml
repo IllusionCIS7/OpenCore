@@ -1,6 +1,7 @@
 reputation:
   min-score: -500
   max-score: 500
+  maxReputationPerAnalysis: 10
   changes:
     helpful-answer:
       min: 2

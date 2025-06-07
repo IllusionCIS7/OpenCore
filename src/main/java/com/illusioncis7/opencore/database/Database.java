@@ -182,6 +182,15 @@ public class Database {
                     "changed_at TIMESTAMP NOT NULL" +
                     ")";
             stmt.executeUpdate(cfgHistSql);
+
+            String analysisSql = "CREATE TABLE IF NOT EXISTS chat_analysis_log (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "timestamp TIMESTAMP NOT NULL," +
+                    "chatlog TEXT NOT NULL," +
+                    "json TEXT NOT NULL," +
+                    "betroffene_spieler TEXT" +
+                    ")";
+            stmt.executeUpdate(analysisSql);
         }
     }
 
