@@ -1,4 +1,4 @@
 # Beispielkonfiguration für das GPT-Modul
 enabled: true
 api-key: "REPLACE-ME"
-interval-seconds: 60
+interval-seconds: 600
