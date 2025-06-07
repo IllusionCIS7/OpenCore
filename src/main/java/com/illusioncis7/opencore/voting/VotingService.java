@@ -141,7 +141,8 @@ public class VotingService {
     public List<Suggestion> getOpenSuggestions() {
         List<Suggestion> list = new ArrayList<>();
         if (database.getConnection() == null) return list;
-        String sql = "SELECT id, player_uuid, parameter_id, new_value, text, created, open FROM suggestions WHERE open = 1";
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, c.description " +
+                "FROM suggestions s LEFT JOIN config_params c ON s.parameter_id = c.id WHERE s.open = 1";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -153,7 +154,8 @@ public class VotingService {
                 String t = rs.getString(5);
                 Instant created = rs.getTimestamp(6).toInstant();
                 boolean open = rs.getBoolean(7);
-                list.add(new Suggestion(id, player, paramId, value, t, created, open));
+                String desc = rs.getString(8);
+                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open));
             }
         } catch (SQLException e) {
             logger.severe("Failed to fetch suggestions: " + e.getMessage());

@@ -6,6 +6,7 @@ public class ConfigParameter {
     private String parameterPath;
     private String minValue;
     private String maxValue;
+    private String description;
     private String recommendedRange;
     private boolean editable;
     private String impactCategory;
@@ -56,6 +57,14 @@ public class ConfigParameter {
 
     public void setMaxValue(String maxValue) {
         this.maxValue = maxValue;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getRecommendedRange() {

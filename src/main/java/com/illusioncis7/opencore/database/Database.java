@@ -69,6 +69,7 @@ public class Database {
                     "editable BOOLEAN DEFAULT 0," +
                     "impact_category VARCHAR(50)," +
                     "impact_rating INT DEFAULT 5," +
+                    "description TEXT," +
                     "UNIQUE KEY path_param (path, parameter_path)" +
                     ")";
             stmt.executeUpdate(cfgSql);
