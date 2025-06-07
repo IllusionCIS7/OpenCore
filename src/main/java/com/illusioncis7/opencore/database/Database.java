@@ -58,6 +58,20 @@ public class Database {
                     "response_time TIMESTAMP" +
                     ")";
             stmt.executeUpdate(gptSql);
+
+            String cfgSql = "CREATE TABLE IF NOT EXISTS config_params (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "path VARCHAR(255) NOT NULL," +
+                    "parameter_path VARCHAR(255) NOT NULL," +
+                    "min_value VARCHAR(255)," +
+                    "max_value VARCHAR(255)," +
+                    "recommended_range VARCHAR(255)," +
+                    "editable BOOLEAN DEFAULT 0," +
+                    "impact_category VARCHAR(50)," +
+                    "impact_rating INT DEFAULT 5," +
+                    "UNIQUE KEY path_param (path, parameter_path)" +
+                    ")";
+            stmt.executeUpdate(cfgSql);
         }
     }
 
