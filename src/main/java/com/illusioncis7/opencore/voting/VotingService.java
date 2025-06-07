@@ -104,6 +104,11 @@ public class VotingService {
                 storeMappingError(suggestionId, "GPT returned no response");
                 return;
             }
+            if (!com.illusioncis7.opencore.gpt.GptSchemas.validate("suggest_map", response)) {
+                logger.warning("Invalid GPT mapping schema for suggestion " + suggestionId);
+                storeMappingError(suggestionId, "Invalid schema");
+                return;
+            }
             try {
                 JSONObject obj = new JSONObject(response);
                 int paramId = obj.getInt("id");
@@ -127,6 +132,11 @@ public class VotingService {
             if (response == null) {
                 logger.warning("GPT mapping failed for rule suggestion: " + text);
                 storeMappingError(suggestionId, "GPT returned no response");
+                return;
+            }
+            if (!com.illusioncis7.opencore.gpt.GptSchemas.validate("rule_map", response)) {
+                logger.warning("Invalid GPT rule_map schema for suggestion " + suggestionId);
+                storeMappingError(suggestionId, "Invalid schema");
                 return;
             }
             try {
