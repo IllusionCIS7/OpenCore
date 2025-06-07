@@ -193,6 +193,21 @@ public class Database {
         return null;
     }
 
+    /**
+     * Measure database ping time in milliseconds.
+     */
+    public long ping() {
+        if (connection == null) return -1;
+        long start = System.currentTimeMillis();
+        try (PreparedStatement ps = connection.prepareStatement("SELECT 1")) {
+            ps.execute();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("DB ping failed: " + e.getMessage());
+            return -1;
+        }
+        return System.currentTimeMillis() - start;
+    }
+
     public void disconnect() {
         if (connection != null) {
             try {

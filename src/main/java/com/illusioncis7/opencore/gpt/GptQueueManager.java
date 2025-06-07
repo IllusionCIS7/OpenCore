@@ -23,6 +23,13 @@ public class GptQueueManager {
     private final Logger logger;
     private final int maxQueueSize;
 
+    /**
+     * Get current queue size.
+     */
+    public int getQueueSize() {
+        return queue.size();
+    }
+
     public GptQueueManager(JavaPlugin plugin, GptService gptService, GptResponseHandler responseHandler) {
         this(plugin, gptService, responseHandler, 100);
     }
