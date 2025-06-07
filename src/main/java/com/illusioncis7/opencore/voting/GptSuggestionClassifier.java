@@ -40,6 +40,10 @@ public class GptSuggestionClassifier {
                 handleFailure(suggestionId, "Empty GPT response");
                 return;
             }
+            if (!com.illusioncis7.opencore.gpt.GptSchemas.validate("suggest_classify", response)) {
+                handleFailure(suggestionId, "Invalid schema");
+                return;
+            }
             try {
                 JSONObject obj = new JSONObject(response);
                 String typeStr = obj.getString("suggestion_type");

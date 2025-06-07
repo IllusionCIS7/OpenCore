@@ -47,6 +47,10 @@ public class ChatAnalyzerTask extends BukkitRunnable {
             if (response == null || response.isEmpty()) {
                 return;
             }
+            if (!com.illusioncis7.opencore.gpt.GptSchemas.validate("chat_analysis", response)) {
+                logger.warning("Invalid chat_analysis schema for GPT response");
+                return;
+            }
             try {
                 JSONArray arr = new JSONArray(response);
                 for (int i = 0; i < arr.length(); i++) {

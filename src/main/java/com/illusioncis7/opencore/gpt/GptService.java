@@ -111,7 +111,11 @@ public class GptService {
         UUID requestId = UUID.randomUUID();
         GptRequest request = new GptRequest(requestId, prompt, playerUuid, callback);
         queue.add(request);
-        plugin.getLogger().info("Queued GPT request " + requestId);
+        if (playerUuid != null) {
+            plugin.getLogger().info("Queued GPT request " + requestId + " for " + playerUuid);
+        } else {
+            plugin.getLogger().info("Queued GPT request " + requestId);
+        }
     }
 
     public void submitTemplate(String category, String data, UUID playerUuid, Consumer<String> callback) {
@@ -124,6 +128,7 @@ public class GptService {
             return;
         }
         String prompt = template.replace("{data}", data);
+        plugin.getLogger().info("Submitting GPT template " + category + " for " + (playerUuid != null ? playerUuid : "system"));
         submitRequest(prompt, playerUuid, callback);
     }
 
@@ -140,7 +145,11 @@ public class GptService {
     }
 
     private void sendRequest(GptRequest request, int attempt) {
-        plugin.getLogger().info("Processing GPT request " + request.requestId + " (attempt " + attempt + ")");
+        if (request.playerUuid != null) {
+            plugin.getLogger().info("Processing GPT request " + request.requestId + " for " + request.playerUuid + " (attempt " + attempt + ")");
+        } else {
+            plugin.getLogger().info("Processing GPT request " + request.requestId + " (attempt " + attempt + ")");
+        }
         long start = System.currentTimeMillis();
         logRequest(request);
 
@@ -185,12 +194,17 @@ public class GptService {
                     }
 
                     if (!success && attempt < 3) {
-                        plugin.getLogger().warning("Retrying GPT request " + request.requestId + " (attempt " + (attempt + 1) + ")");
-                        sendRequest(request, attempt + 1);
+                        int delay = (int) Math.pow(2, attempt - 1);
+                        plugin.getLogger().warning("Retrying GPT request " + request.requestId + " in " + delay + "s (attempt " + (attempt + 1) + ")");
+                        plugin.getServer().getScheduler().runTaskLaterAsynchronously(plugin,
+                                () -> sendRequest(request, attempt + 1), delay * 20L);
                         return;
                     }
 
                     logResponse(request.requestId, answer);
+                    if (success) {
+                        plugin.getLogger().info("GPT request " + request.requestId + " answered in " + (System.currentTimeMillis() - start) + "ms");
+                    }
                     lastResponseMs = System.currentTimeMillis() - start;
                     if (request.callback != null) {
                         request.callback.accept(answer);
