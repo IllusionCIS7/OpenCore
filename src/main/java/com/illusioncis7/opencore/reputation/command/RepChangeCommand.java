@@ -5,15 +5,16 @@ import com.illusioncis7.opencore.reputation.ReputationService;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 
 import java.util.UUID;
+import java.util.Collections;
 
 /**
  * Admin command to inspect a specific reputation change event.
  */
-public class RepChangeCommand implements CommandExecutor {
+public class RepChangeCommand implements TabExecutor {
     private final ReputationService reputationService;
 
     public RepChangeCommand(ReputationService reputationService) {
@@ -47,5 +48,10 @@ public class RepChangeCommand implements CommandExecutor {
             sender.sendMessage("Invalid ID format.");
         }
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

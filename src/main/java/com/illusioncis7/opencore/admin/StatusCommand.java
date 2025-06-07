@@ -5,10 +5,12 @@ import com.illusioncis7.opencore.gpt.GptQueueManager;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.voting.VotingService;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 
-public class StatusCommand implements CommandExecutor {
+import java.util.Collections;
+
+public class StatusCommand implements TabExecutor {
     private final GptQueueManager queueManager;
     private final VotingService votingService;
     private final Database database;
@@ -33,5 +35,10 @@ public class StatusCommand implements CommandExecutor {
         sender.sendMessage("DB ping: " + (ping >= 0 ? ping + " ms" : "n/a"));
         sender.sendMessage("Last GPT response: " + (last >= 0 ? last + " ms" : "n/a"));
         return true;
+    }
+
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

@@ -38,6 +38,7 @@ public class OpenCore extends JavaPlugin {
     private ReputationService reputationService;
     private VotingService votingService;
     private PlanHook planHook;
+    private com.illusioncis7.opencore.api.ApiServer apiServer;
 
     public static OpenCore getInstance() {
         return instance;
@@ -51,6 +52,8 @@ public class OpenCore extends JavaPlugin {
         saveResource("database.yml", false);
         saveResource("config-scan.yml", false);
         saveResource("reputation.yml", false);
+        saveResource("voting.yml", false);
+        saveResource("api.yml", false);
 
         database = new Database(this);
         database.connect();
@@ -76,19 +79,58 @@ public class OpenCore extends JavaPlugin {
         }
 
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
-        Objects.requireNonNull(getCommand("suggest")).setExecutor(new SuggestCommand(votingService));
-        Objects.requireNonNull(getCommand("suggestions")).setExecutor(new SuggestionsCommand(votingService));
-        Objects.requireNonNull(getCommand("vote")).setExecutor(new VoteCommand(votingService));
-        Objects.requireNonNull(getCommand("rules")).setExecutor(new RulesCommand(ruleService));
-        Objects.requireNonNull(getCommand("editrule")).setExecutor(new EditRuleCommand(ruleService));
-        Objects.requireNonNull(getCommand("rollbackconfig")).setExecutor(new RollbackConfigCommand(configService));
-        Objects.requireNonNull(getCommand("myrep")).setExecutor(new com.illusioncis7.opencore.reputation.command.MyRepCommand(reputationService));
-        Objects.requireNonNull(getCommand("gptlog")).setExecutor(new com.illusioncis7.opencore.gpt.command.GptLogCommand(gptResponseHandler));
-        Objects.requireNonNull(getCommand("repinfo")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepInfoCommand(reputationService));
-        Objects.requireNonNull(getCommand("repchange")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepChangeCommand(reputationService));
-        Objects.requireNonNull(getCommand("status")).setExecutor(new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService));
-        Objects.requireNonNull(getCommand("configlist")).setExecutor(new com.illusioncis7.opencore.config.command.ConfigListCommand(configService));
-        Objects.requireNonNull(getCommand("votestatus")).setExecutor(new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService));
+
+        SuggestCommand suggestCmd = new SuggestCommand(votingService);
+        Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
+        getCommand("suggest").setTabCompleter(suggestCmd);
+
+        SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
+        Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
+        getCommand("suggestions").setTabCompleter(listCmd);
+
+        VoteCommand voteCmd = new VoteCommand(votingService);
+        Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
+        getCommand("vote").setTabCompleter(voteCmd);
+
+        RulesCommand rulesCmd = new RulesCommand(ruleService);
+        Objects.requireNonNull(getCommand("rules")).setExecutor(rulesCmd);
+        getCommand("rules").setTabCompleter(rulesCmd);
+
+        EditRuleCommand editRuleCmd = new EditRuleCommand(ruleService);
+        Objects.requireNonNull(getCommand("editrule")).setExecutor(editRuleCmd);
+        getCommand("editrule").setTabCompleter(editRuleCmd);
+
+        RollbackConfigCommand rollCmd = new RollbackConfigCommand(configService);
+        Objects.requireNonNull(getCommand("rollbackconfig")).setExecutor(rollCmd);
+        getCommand("rollbackconfig").setTabCompleter(rollCmd);
+
+        com.illusioncis7.opencore.reputation.command.MyRepCommand myRepCmd = new com.illusioncis7.opencore.reputation.command.MyRepCommand(reputationService);
+        Objects.requireNonNull(getCommand("myrep")).setExecutor(myRepCmd);
+        getCommand("myrep").setTabCompleter(myRepCmd);
+
+        com.illusioncis7.opencore.gpt.command.GptLogCommand gptLogCmd = new com.illusioncis7.opencore.gpt.command.GptLogCommand(gptResponseHandler);
+        Objects.requireNonNull(getCommand("gptlog")).setExecutor(gptLogCmd);
+        getCommand("gptlog").setTabCompleter(gptLogCmd);
+
+        com.illusioncis7.opencore.reputation.command.RepInfoCommand repInfoCmd = new com.illusioncis7.opencore.reputation.command.RepInfoCommand(reputationService);
+        Objects.requireNonNull(getCommand("repinfo")).setExecutor(repInfoCmd);
+        getCommand("repinfo").setTabCompleter(repInfoCmd);
+
+        com.illusioncis7.opencore.reputation.command.RepChangeCommand repChangeCmd = new com.illusioncis7.opencore.reputation.command.RepChangeCommand(reputationService);
+        Objects.requireNonNull(getCommand("repchange")).setExecutor(repChangeCmd);
+        getCommand("repchange").setTabCompleter(repChangeCmd);
+
+        com.illusioncis7.opencore.admin.StatusCommand statusCmd = new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService);
+        Objects.requireNonNull(getCommand("status")).setExecutor(statusCmd);
+        getCommand("status").setTabCompleter(statusCmd);
+
+        com.illusioncis7.opencore.config.command.ConfigListCommand cfgListCmd = new com.illusioncis7.opencore.config.command.ConfigListCommand(configService);
+        Objects.requireNonNull(getCommand("configlist")).setExecutor(cfgListCmd);
+        getCommand("configlist").setTabCompleter(cfgListCmd);
+
+        com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
+        Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
+        getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
@@ -103,6 +145,17 @@ public class OpenCore extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook), this);
         getServer().getPluginManager().registerEvents(gptResponseHandler, this);
+
+        org.bukkit.configuration.file.FileConfiguration apiCfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new File(getDataFolder(), "api.yml"));
+        int port = apiCfg.getInt("port", 0);
+        try {
+            apiServer = new com.illusioncis7.opencore.api.ApiServer(port, votingService,
+                    reputationService, ruleService, getLogger());
+        } catch (Exception e) {
+            getLogger().warning("Failed to start API server: " + e.getMessage());
+        }
     }
 
     @Override
@@ -115,6 +168,9 @@ public class OpenCore extends JavaPlugin {
         }
         if (gptQueueManager != null) {
             gptQueueManager.stop();
+        }
+        if (apiServer != null) {
+            apiServer.stop();
         }
     }
 
