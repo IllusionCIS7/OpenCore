@@ -49,6 +49,11 @@ public class VotingService {
             return;
         }
 
+        int delta = reputationService.computeChange("suggestion-submitted", 1.0);
+        if (delta != 0) {
+            reputationService.adjustReputation(player, delta, "suggestion submitted", "suggestion", String.valueOf(id));
+        }
+
         classifier.classify(id, text,
                 () -> mapConfigChange(id, player, text),
                 () -> mapRuleChange(id, player, text));
@@ -342,6 +347,20 @@ public class VotingService {
         if (updated) {
             markClosed(suggestionId);
             logger.info("Applied suggestion " + suggestionId + " updating target " + paramId);
+            int delta = reputationService.computeChange("suggestion-accepted", 1.0);
+            if (delta != 0 && player != null) {
+                reputationService.adjustReputation(player, delta, "suggestion accepted", "suggestion", String.valueOf(suggestionId));
+            }
+
+            if (player != null) {
+                int count = getImplementedCount(player);
+                if (count > 1) {
+                    int extra = reputationService.computeChange("suggestion-multiple-implemented", 1.0);
+                    if (extra != 0) {
+                        reputationService.adjustReputation(player, extra, "multiple suggestions implemented", "suggestion", String.valueOf(count));
+                    }
+                }
+            }
         }
     }
 
@@ -354,5 +373,22 @@ public class VotingService {
         } catch (SQLException e) {
             logger.warning("Failed to close suggestion: " + e.getMessage());
         }
+    }
+
+    private int getImplementedCount(UUID player) {
+        if (database.getConnection() == null) return 0;
+        String sql = "SELECT COUNT(*) FROM suggestions WHERE player_uuid = ? AND open = 0";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, player.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to count implementations: " + e.getMessage());
+        }
+        return 0;
     }
 }
