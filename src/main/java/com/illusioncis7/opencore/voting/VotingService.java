@@ -70,17 +70,56 @@ public class VotingService {
         gptService.submitRequest(prompt, player, response -> {
             if (response == null) {
                 logger.warning("GPT mapping failed for suggestion: " + text);
+                storeMappingError(suggestionId, "GPT returned no response");
                 return;
             }
             try {
                 JSONObject obj = new JSONObject(response);
                 int paramId = obj.getInt("id");
                 String value = obj.getString("value");
+                if (!isEditableParam(paramId)) {
+                    String error = "Config parameter " + paramId + " not editable";
+                    logger.warning(error);
+                    storeMappingError(suggestionId, error);
+                    return;
+                }
                 updateMapping(suggestionId, paramId, value);
             } catch (Exception e) {
                 logger.warning("Invalid GPT mapping response: " + e.getMessage());
+                storeMappingError(suggestionId, "Parse error: " + e.getMessage());
             }
         });
+    }
+
+    private boolean isEditableParam(int paramId) {
+        if (database.getConnection() == null) return false;
+        String sql = "SELECT editable FROM config_params WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, paramId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to validate config parameter: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private void storeMappingError(int suggestionId, String error) {
+        if (database.getConnection() == null) return;
+        String sql = "UPDATE suggestions SET gpt_reasoning = ?, classified_at = ? WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, error);
+            ps.setTimestamp(2, Timestamp.from(Instant.now()));
+            ps.setInt(3, suggestionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warning("Failed to log mapping error: " + e.getMessage());
+        }
     }
 
     private void updateMapping(int suggestionId, int paramId, String value) {
