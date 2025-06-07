@@ -27,7 +27,12 @@ public class VoteCommand implements CommandExecutor {
         try {
             int id = Integer.parseInt(args[0]);
             boolean yes = args[1].equalsIgnoreCase("yes") || args[1].equalsIgnoreCase("y");
-            boolean success = votingService.castVote(((Player) sender).getUniqueId(), id, yes);
+            Player player = (Player) sender;
+            if (votingService.hasPlayerVoted(player.getUniqueId(), id)) {
+                sender.sendMessage("Du hast bereits abgestimmt.");
+                return true;
+            }
+            boolean success = votingService.castVote(player.getUniqueId(), id, yes);
             if (!success) {
                 sender.sendMessage("Unknown or closed suggestion.");
                 OpenCore.getInstance().getLogger().warning("Invalid vote from " + sender.getName() + " for " + id);

@@ -12,6 +12,7 @@ import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.voting.command.SuggestCommand;
 import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
 import com.illusioncis7.opencore.voting.command.VoteCommand;
+import com.illusioncis7.opencore.voting.command.VoteStatusCommand;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.rules.command.RulesCommand;
 import com.illusioncis7.opencore.config.command.RollbackConfigCommand;
@@ -22,6 +23,7 @@ import java.io.File;
 import java.util.Objects;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class OpenCore extends JavaPlugin {
 
@@ -84,9 +86,17 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("repchange")).setExecutor(new com.illusioncis7.opencore.reputation.command.RepChangeCommand(reputationService));
         Objects.requireNonNull(getCommand("status")).setExecutor(new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService));
         Objects.requireNonNull(getCommand("configlist")).setExecutor(new com.illusioncis7.opencore.config.command.ConfigListCommand(configService));
+        Objects.requireNonNull(getCommand("votestatus")).setExecutor(new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService));
 
         new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                votingService.checkOpenSuggestions();
+            }
+        }.runTaskTimer(this, 0L, 30 * 60 * 20L);
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook), this);

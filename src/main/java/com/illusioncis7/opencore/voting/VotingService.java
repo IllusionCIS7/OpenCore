@@ -29,6 +29,7 @@ public class VotingService {
     private final GptSuggestionClassifier classifier;
     private final PlanHook planHook;
     private final String webhookUrl;
+    private static final Duration VOTE_LIFETIME = Duration.ofDays(7);
 
     public static class VoteWeights {
         public final int yesWeight;
@@ -261,6 +262,35 @@ public class VotingService {
         return false;
     }
 
+    public List<Suggestion> getClosedSuggestions() {
+        List<Suggestion> list = new ArrayList<>();
+        if (database.getConnection() == null) return list;
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+                "COALESCE(c.description, r.rule_text) " +
+                "FROM suggestions s " +
+                "LEFT JOIN config_params c ON s.parameter_id = c.id " +
+                "LEFT JOIN server_rules r ON s.parameter_id = r.id " +
+                "WHERE s.open = 0";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                UUID player = UUID.fromString(rs.getString(2));
+                int paramId = rs.getInt(3);
+                String value = rs.getString(4);
+                String t = rs.getString(5);
+                Instant created = rs.getTimestamp(6).toInstant();
+                boolean open = rs.getBoolean(7);
+                String desc = rs.getString(8);
+                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open));
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to fetch closed suggestions: " + e.getMessage());
+        }
+        return list;
+    }
+
     public VoteWeights getVoteWeights(int suggestionId) {
         if (database.getConnection() == null) return new VoteWeights(0, 0, 0);
 
@@ -355,6 +385,79 @@ public class VotingService {
         }
         evaluateVotes(suggestionId);
         return true;
+    }
+
+    public boolean hasPlayerVoted(UUID player, int suggestionId) {
+        if (database.getConnection() == null) return false;
+        String sql = "SELECT 1 FROM votes WHERE suggestion_id = ? AND player_uuid = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, suggestionId);
+            ps.setString(2, player.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to check existing vote: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean isSimilarSuggestionRecent(String text, Duration timeframe, int maxDistance) {
+        if (database.getConnection() == null) return false;
+        String sql = "SELECT text FROM suggestions WHERE created >= ?";
+        Instant since = Instant.now().minus(timeframe);
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.from(since));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String other = rs.getString(1);
+                    if (levenshtein(text.toLowerCase(), other.toLowerCase()) < maxDistance) {
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to check similar suggestions: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private int levenshtein(String a, String b) {
+        int[] prev = new int[b.length() + 1];
+        int[] curr = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) {
+            prev[j] = j;
+        }
+        for (int i = 1; i <= a.length(); i++) {
+            curr[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            int[] tmp = prev;
+            prev = curr;
+            curr = tmp;
+        }
+        return prev[b.length()];
+    }
+
+    public void checkOpenSuggestions() {
+        for (Suggestion s : getOpenSuggestions()) {
+            evaluateVotes(s.id);
+            if (!isSuggestionOpen(s.id)) {
+                continue;
+            }
+            if (Duration.between(s.created, Instant.now()).compareTo(VOTE_LIFETIME) >= 0) {
+                VoteWeights w = getVoteWeights(s.id);
+                if (w.yesWeight > w.noWeight) {
+                    applySuggestion(s.id);
+                } else {
+                    markClosed(s.id);
+                }
+            }
+        }
     }
 
     private void evaluateVotes(int suggestionId) {

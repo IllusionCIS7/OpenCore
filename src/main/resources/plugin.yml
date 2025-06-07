@@ -26,3 +26,5 @@ commands:
     description: Show plugin status
   configlist:
     description: List configurable parameters
+  votestatus:
+    description: Show closed vote results

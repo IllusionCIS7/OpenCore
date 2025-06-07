@@ -30,6 +30,10 @@ public class SuggestCommand implements CommandExecutor {
             OpenCore.getInstance().getLogger().warning("Rejected short suggestion from " + sender.getName());
             return true;
         }
+        if (votingService.isSimilarSuggestionRecent(text, java.time.Duration.ofHours(24), 10)) {
+            sender.sendMessage("Ähnlicher Vorschlag existiert bereits.");
+            return true;
+        }
         int id = votingService.submitSuggestion(((Player) sender).getUniqueId(), text);
         if (id == -1) {
             sender.sendMessage("Failed to submit suggestion.");
