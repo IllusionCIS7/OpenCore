@@ -39,12 +39,11 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         if (messages.isEmpty()) {
             return;
         }
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Analyze the following chat messages and rate the behavior. Output JSON with fields alias_id, change, reason_summary.\n");
+        StringBuilder data = new StringBuilder();
         for (ChatMessage msg : messages) {
-            prompt.append("[" + msg.id + "] " + msg.aliasId + ": " + msg.message + "\n");
+            data.append("[" + msg.id + "] " + msg.aliasId + ": " + msg.message + "\n");
         }
-        gptService.submitRequest(prompt.toString(), null, response -> {
+        gptService.submitTemplate("chat_analysis", data.toString(), null, response -> {
             if (response == null || response.isEmpty()) {
                 return;
             }

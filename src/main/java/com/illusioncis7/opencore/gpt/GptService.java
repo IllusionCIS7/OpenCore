@@ -79,6 +79,19 @@ public class GptService {
         plugin.getLogger().info("Queued GPT request " + requestId);
     }
 
+    public void submitTemplate(String category, String data, UUID playerUuid, Consumer<String> callback) {
+        String template = database.getPrompt(category);
+        if (template == null) {
+            plugin.getLogger().warning("No GPT prompt found for category " + category);
+            if (callback != null) {
+                callback.accept(null);
+            }
+            return;
+        }
+        String prompt = template.replace("{data}", data);
+        submitRequest(prompt, playerUuid, callback);
+    }
+
     private void processNext() {
         if (processing) {
             return;

@@ -6,6 +6,7 @@ Ein modulares Bukkit-Plugin für Paper 1.21.4, das demokratische Communitysteuer
 - **Config-Modul:** Spieler schlagen Parameteränderungen vor, GPT mapped, Community stimmt ab
 - **Reputationsmodul:** Chatverhalten wird GPT-basiert analysiert und in ein Punktesystem übersetzt
 - **GPT-Modul:** zentrale asynchrone Queue, Intervallsteuerung, Logging, modulübergreifende Nutzung
+- **Prompts:** Datenbanktabelle `gpt_prompts` hält Vorlagen für die verschiedenen GPT-Anfragen
 
 ## 📡 Schnittstellen
 - GPT (OpenAI API)

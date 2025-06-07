@@ -66,8 +66,7 @@ public class VotingService {
     }
 
     private void mapConfigChange(int suggestionId, UUID player, String text) {
-        String prompt = "Map the following suggestion to a config parameter ID and value as JSON {id, value}:\n" + text;
-        gptService.submitRequest(prompt, player, response -> {
+        gptService.submitTemplate("suggest_map", text, player, response -> {
             if (response == null) {
                 logger.warning("GPT mapping failed for suggestion: " + text);
                 storeMappingError(suggestionId, "GPT returned no response");
