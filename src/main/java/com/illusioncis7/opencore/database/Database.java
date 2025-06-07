@@ -104,11 +104,15 @@ public class Database {
             String suggestionSql = "CREATE TABLE IF NOT EXISTS suggestions (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "player_uuid VARCHAR(36) NOT NULL," +
-                    "parameter_id INT NOT NULL," +
-                    "new_value VARCHAR(255) NOT NULL," +
+                    "parameter_id INT," +
+                    "new_value VARCHAR(255)," +
                     "text TEXT," +
                     "created TIMESTAMP NOT NULL," +
-                    "open BOOLEAN DEFAULT 1" +
+                    "open BOOLEAN DEFAULT 1," +
+                    "suggestion_type ENUM('CONFIG_CHANGE','RULE_CHANGE','MODERATION_REQUEST','FEATURE_REQUEST','BUG_REPORT','EVENT_PROPOSAL','OTHER')," +
+                    "gpt_reasoning TEXT," +
+                    "gpt_confidence FLOAT," +
+                    "classified_at TIMESTAMP" +
                     ")";
             stmt.executeUpdate(suggestionSql);
 
