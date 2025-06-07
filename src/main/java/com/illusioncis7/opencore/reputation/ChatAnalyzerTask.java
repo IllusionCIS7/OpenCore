@@ -2,6 +2,7 @@ package com.illusioncis7.opencore.reputation;
 
 import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
+import com.illusioncis7.opencore.rules.RuleService;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,13 +21,16 @@ public class ChatAnalyzerTask extends BukkitRunnable {
     private final Database database;
     private final GptService gptService;
     private final ReputationService reputationService;
+    private final RuleService ruleService;
     private final Logger logger;
     private Instant lastRun;
 
-    public ChatAnalyzerTask(Database database, GptService gptService, ReputationService reputationService, Logger logger) {
+    public ChatAnalyzerTask(Database database, GptService gptService, ReputationService reputationService,
+                           RuleService ruleService, Logger logger) {
         this.database = database;
         this.gptService = gptService;
         this.reputationService = reputationService;
+        this.ruleService = ruleService;
         this.logger = logger;
         this.lastRun = Instant.now().minusSeconds(45 * 60);
     }
@@ -43,7 +47,10 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         for (ChatMessage msg : messages) {
             data.append("[" + msg.id + "] " + msg.aliasId + ": " + msg.message + "\n");
         }
-        gptService.submitTemplate("chat_analysis", data.toString(), null, response -> {
+        java.util.Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("message", data.toString());
+        vars.put("rules", joinRules());
+        gptService.submitPolicyRequest("chat_analysis", vars, null, response -> {
             if (response == null || response.isEmpty()) {
                 return;
             }
@@ -93,6 +100,14 @@ public class ChatAnalyzerTask extends BukkitRunnable {
             logger.warning("Alias lookup failed: " + e.getMessage());
         }
         return null;
+    }
+
+    private String joinRules() {
+        StringBuilder sb = new StringBuilder();
+        for (com.illusioncis7.opencore.rules.Rule r : ruleService.getRules()) {
+            sb.append(r.text).append("\n");
+        }
+        return sb.toString();
     }
 
     private List<ChatMessage> loadMessages(Instant since) {

@@ -32,6 +32,7 @@ public class GptService {
 
     private final JavaPlugin plugin;
     private final Database database;
+    private final PolicyService policyService;
     private final Queue<GptRequest> queue = new ConcurrentLinkedQueue<>();
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Set<UUID> activePlayers = ConcurrentHashMap.newKeySet();
@@ -46,9 +47,10 @@ public class GptService {
     private boolean enabled;
     private boolean processing;
 
-    public GptService(JavaPlugin plugin, Database database) {
+    public GptService(JavaPlugin plugin, Database database, PolicyService policyService) {
         this.plugin = plugin;
         this.database = database;
+        this.policyService = policyService;
     }
 
     public void init() {
@@ -79,6 +81,39 @@ public class GptService {
      */
     public long getLastResponseDuration() {
         return lastResponseMs;
+    }
+
+    /**
+     * Build a prompt for the given module using the stored policy text.
+     * Placeholders of the form %key% are replaced with the provided values.
+     */
+    public String buildPrompt(String module, Map<String, String> values) {
+        String policy = policyService.getOrDefault(module);
+        if (policy == null) {
+            return null;
+        }
+        String result = policy;
+        if (values != null) {
+            for (Map.Entry<String, String> e : values.entrySet()) {
+                String ph = "%" + e.getKey() + "%";
+                result = result.replace(ph, e.getValue());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Convenience to submit a request based on a policy module.
+     */
+    public void submitPolicyRequest(String module, Map<String, String> values, UUID playerUuid, Consumer<String> callback) {
+        String prompt = buildPrompt(module, values);
+        if (prompt == null) {
+            plugin.getLogger().warning("No policy found for module " + module);
+            if (callback != null) callback.accept(null);
+            return;
+        }
+        plugin.getLogger().info("Submitting policy " + module + " for " + (playerUuid != null ? playerUuid : "system"));
+        submitRequest(prompt, playerUuid, callback);
     }
 
     public void submitRequest(String prompt, UUID playerUuid, Consumer<String> callback) {

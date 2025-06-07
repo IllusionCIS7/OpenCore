@@ -2,6 +2,7 @@ package com.illusioncis7.opencore.voting;
 
 import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
+import com.illusioncis7.opencore.rules.RuleService;
 import org.json.JSONObject;
 
 import java.sql.Connection;
@@ -18,10 +19,12 @@ public class GptSuggestionClassifier {
     private final GptService gptService;
     private final Database database;
     private final Logger logger;
+    private final RuleService ruleService;
 
-    public GptSuggestionClassifier(GptService gptService, Database database, Logger logger) {
+    public GptSuggestionClassifier(GptService gptService, Database database, RuleService ruleService, Logger logger) {
         this.gptService = gptService;
         this.database = database;
+        this.ruleService = ruleService;
         this.logger = logger;
     }
 
@@ -35,7 +38,10 @@ public class GptSuggestionClassifier {
      */
     public void classify(int suggestionId, String text, Runnable onConfig, Runnable onRule,
                          java.util.function.Consumer<SuggestionType> after) {
-        gptService.submitTemplate("suggest_classify", text, null, response -> {
+        java.util.Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("s", text);
+        vars.put("rules", joinRules());
+        gptService.submitPolicyRequest("suggest_classify", vars, null, response -> {
             if (response == null || response.isEmpty()) {
                 handleFailure(suggestionId, "Empty GPT response");
                 return;
@@ -101,5 +107,13 @@ public class GptSuggestionClassifier {
         } catch (Exception e) {
             logger.warning("Failed to log classification error: " + e.getMessage());
         }
+    }
+
+    private String joinRules() {
+        StringBuilder sb = new StringBuilder();
+        for (com.illusioncis7.opencore.rules.Rule r : ruleService.getRules()) {
+            sb.append(r.text).append("\n");
+        }
+        return sb.toString();
     }
 }
