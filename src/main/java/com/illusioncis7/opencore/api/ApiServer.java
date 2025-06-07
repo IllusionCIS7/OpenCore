@@ -7,6 +7,8 @@ import com.illusioncis7.opencore.config.ConfigParameter;
 import com.illusioncis7.opencore.setup.SetupManager;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.reputation.ReputationService.PlayerReputation;
+import com.illusioncis7.opencore.reputation.ChatReputationFlagService;
+import com.illusioncis7.opencore.reputation.ReputationFlag;
 import com.illusioncis7.opencore.voting.Suggestion;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.sun.net.httpserver.HttpExchange;
@@ -28,6 +30,7 @@ import java.util.logging.Logger;
 public class ApiServer {
     private final VotingService votingService;
     private final ReputationService reputationService;
+    private final ChatReputationFlagService chatFlagService;
     private final RuleService ruleService;
     private final ConfigService configService;
     private final SetupManager setupManager;
@@ -36,9 +39,11 @@ public class ApiServer {
     private final boolean exposeReputations;
 
     public ApiServer(int port, boolean exposeReputations, VotingService votingService, ReputationService reputationService,
+                     ChatReputationFlagService chatFlagService,
                      RuleService ruleService, ConfigService configService, SetupManager setupManager, Logger logger) throws IOException {
         this.votingService = votingService;
         this.reputationService = reputationService;
+        this.chatFlagService = chatFlagService;
         this.ruleService = ruleService;
         this.configService = configService;
         this.setupManager = setupManager;
@@ -60,6 +65,7 @@ public class ApiServer {
         if (exposeReputations) {
             server.createContext("/api/reputations", exchange -> handle(exchange, this::writeReputations));
         }
+        server.createContext("/api/chatflags", exchange -> handle(exchange, this::writeChatFlags));
 
         server.createContext("/setup/status", this::handleSetupStatus);
         server.createContext("/setup/rules", this::handleRulesGet);
@@ -129,6 +135,19 @@ public class ApiServer {
             arr.put(o);
         }
         return new JSONObject().put("reputations", arr);
+    }
+
+    private JSONObject writeChatFlags() {
+        JSONArray arr = new JSONArray();
+        for (ReputationFlag f : chatFlagService.getActiveFlags()) {
+            JSONObject o = new JSONObject();
+            o.put("code", f.code);
+            o.put("description", f.description);
+            o.put("min", f.minChange);
+            o.put("max", f.maxChange);
+            arr.put(o);
+        }
+        return new JSONObject().put("flags", arr);
     }
 
     /* ===== Setup handlers ===== */

@@ -32,3 +32,5 @@ commands:
     description: Edit an existing rule
   rulehistory:
     description: Show history for a rule
+  chatflags:
+    description: Manage chat reputation flags

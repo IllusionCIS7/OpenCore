@@ -9,6 +9,7 @@ import com.illusioncis7.opencore.gpt.PolicyService;
 import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.reputation.PlayerJoinListener;
+import com.illusioncis7.opencore.reputation.ChatReputationFlagService;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.voting.command.SuggestCommand;
 import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
@@ -38,6 +39,7 @@ public class OpenCore extends JavaPlugin {
     private RuleService ruleService;
     private PolicyService policyService;
     private ReputationService reputationService;
+    private ChatReputationFlagService chatFlagService;
     private VotingService votingService;
     private PlanHook planHook;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
@@ -63,6 +65,7 @@ public class OpenCore extends JavaPlugin {
         database.connect();
 
         reputationService = new ReputationService(this, database);
+        chatFlagService = new ChatReputationFlagService(this, database);
 
         configService = new ConfigService(this, database);
         configService.scanAndStore(new File(".").getAbsoluteFile());
@@ -135,6 +138,10 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("repchange")).setExecutor(repChangeCmd);
         getCommand("repchange").setTabCompleter(repChangeCmd);
 
+        com.illusioncis7.opencore.reputation.command.ChatFlagsCommand chatFlagsCmd = new com.illusioncis7.opencore.reputation.command.ChatFlagsCommand(chatFlagService);
+        Objects.requireNonNull(getCommand("chatflags")).setExecutor(chatFlagsCmd);
+        getCommand("chatflags").setTabCompleter(chatFlagsCmd);
+
         com.illusioncis7.opencore.admin.StatusCommand statusCmd = new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService);
         Objects.requireNonNull(getCommand("status")).setExecutor(statusCmd);
         getCommand("status").setTabCompleter(statusCmd);
@@ -147,7 +154,7 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
         getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
-        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, ruleService, getLogger())
+        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger())
                 .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         new BukkitRunnable() {
@@ -168,7 +175,7 @@ public class OpenCore extends JavaPlugin {
         boolean exposeRep = apiCfg.getBoolean("expose-reputations", true);
         try {
             apiServer = new com.illusioncis7.opencore.api.ApiServer(port, exposeRep, votingService,
-                    reputationService, ruleService, configService, setupManager, getLogger());
+                    reputationService, chatFlagService, ruleService, configService, setupManager, getLogger());
         } catch (Exception e) {
             getLogger().warning("Failed to start API server: " + e.getMessage());
         }
@@ -208,6 +215,10 @@ public class OpenCore extends JavaPlugin {
 
     public ReputationService getReputationService() {
         return reputationService;
+    }
+
+    public ChatReputationFlagService getChatFlagService() {
+        return chatFlagService;
     }
 
     public VotingService getVotingService() {

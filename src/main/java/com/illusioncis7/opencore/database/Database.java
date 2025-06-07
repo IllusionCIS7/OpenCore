@@ -103,6 +103,17 @@ public class Database {
                     ")";
             stmt.executeUpdate(guideSql);
 
+            String flagSql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "code VARCHAR(50) NOT NULL," +
+                    "description TEXT," +
+                    "min_change INT NOT NULL," +
+                    "max_change INT NOT NULL," +
+                    "active BOOLEAN DEFAULT 1," +
+                    "last_updated TIMESTAMP NOT NULL" +
+                    ")";
+            stmt.executeUpdate(flagSql);
+
             String suggestionSql = "CREATE TABLE IF NOT EXISTS suggestions (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "player_uuid VARCHAR(36) NOT NULL," +

@@ -3,6 +3,10 @@ package com.illusioncis7.opencore.reputation;
 import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.rules.RuleService;
+import java.util.Map;
+
+import com.illusioncis7.opencore.reputation.ChatReputationFlagService;
+import com.illusioncis7.opencore.reputation.ReputationFlag;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,15 +25,17 @@ public class ChatAnalyzerTask extends BukkitRunnable {
     private final Database database;
     private final GptService gptService;
     private final ReputationService reputationService;
+    private final ChatReputationFlagService flagService;
     private final RuleService ruleService;
     private final Logger logger;
     private Instant lastRun;
 
     public ChatAnalyzerTask(Database database, GptService gptService, ReputationService reputationService,
-                           RuleService ruleService, Logger logger) {
+                           ChatReputationFlagService flagService, RuleService ruleService, Logger logger) {
         this.database = database;
         this.gptService = gptService;
         this.reputationService = reputationService;
+        this.flagService = flagService;
         this.ruleService = ruleService;
         this.logger = logger;
         this.lastRun = Instant.now().minusSeconds(45 * 60);
@@ -50,6 +56,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         java.util.Map<String, String> vars = new java.util.HashMap<>();
         vars.put("message", data.toString());
         vars.put("rules", joinRules());
+        vars.put("flags", formatFlags());
         gptService.submitPolicyRequest("chat_analysis", vars, null, response -> {
             if (response == null || response.isEmpty()) {
                 return;
@@ -59,25 +66,28 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                 return;
             }
             try {
-                JSONArray arr = new JSONArray(response);
+                JSONObject obj = new JSONObject(response);
+                JSONArray arr = obj.optJSONArray("evaluations");
+                if (arr == null) return;
+                Map<String, ReputationFlag> map = flagService.getFlagMap();
                 for (int i = 0; i < arr.length(); i++) {
-                    JSONObject obj = arr.getJSONObject(i);
-                    String alias = obj.getString("alias_id");
+                    JSONObject item = arr.getJSONObject(i);
+                    String alias = item.getString("player");
+                    String flag = item.getString("flag");
+                    int change = item.getInt("change");
+                    String reason = item.optString("reason", "chat analysis");
+                    ReputationFlag def = map.get(flag);
+                    if (def == null) {
+                        logger.warning("Unknown flag " + flag);
+                        continue;
+                    }
+                    if (change < def.minChange || change > def.maxChange) {
+                        logger.warning("Change out of bounds for flag " + flag + ": " + change);
+                        continue;
+                    }
                     UUID playerUuid = resolveAlias(alias);
                     if (playerUuid == null) continue;
-
-                    int change = 0;
-                    for (String key : obj.keySet()) {
-                        if ("alias_id".equals(key) || "reason_summary".equals(key)) continue;
-                        if (reputationService.hasRange(key)) {
-                            double val = obj.optDouble(key, 0.0);
-                            change += reputationService.computeChange(key, val);
-                        }
-                    }
-                    if (change != 0) {
-                        String reason = obj.optString("reason_summary", "chat analysis");
-                        reputationService.adjustReputation(playerUuid, change, reason, "chat", obj.toString());
-                    }
+                    reputationService.adjustReputation(playerUuid, change, reason, "chat", item.toString());
                 }
             } catch (Exception e) {
                 logger.warning("Failed to parse GPT chat analysis: " + e.getMessage());
@@ -106,6 +116,17 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         StringBuilder sb = new StringBuilder();
         for (com.illusioncis7.opencore.rules.Rule r : ruleService.getRules()) {
             sb.append(r.text).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String formatFlags() {
+        StringBuilder sb = new StringBuilder();
+        for (ReputationFlag f : flagService.getActiveFlags()) {
+            sb.append("[").append(f.code).append("]: ")
+                    .append(f.minChange).append(" bis ")
+                    .append(f.maxChange).append(" Punkte, ")
+                    .append(f.description).append("\n");
         }
         return sb.toString();
     }

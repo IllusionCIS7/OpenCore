@@ -53,19 +53,28 @@ public final class GptSchemas {
               "additionalProperties": true
             }
         """));
-        // Schema for chat_analysis responses
+        // Schema for chat_analysis responses (v2)
         SCHEMAS.put("chat_analysis", load("""
             {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "alias_id": {"type": "string"},
-                  "reason_summary": {"type": "string"}
-                },
-                "required": ["alias_id"],
-                "additionalProperties": true
-              }
+              "type": "object",
+              "properties": {
+                "evaluations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "player": {"type": "string"},
+                      "flag": {"type": "string"},
+                      "change": {"type": "integer"},
+                      "reason": {"type": "string"}
+                    },
+                    "required": ["player", "flag", "change"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["evaluations"],
+              "additionalProperties": false
             }
         """));
     }
