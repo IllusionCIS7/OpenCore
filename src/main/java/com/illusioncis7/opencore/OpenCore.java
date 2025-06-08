@@ -174,7 +174,7 @@ public class OpenCore extends JavaPlugin {
         }.runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook, messageService), this);
         getServer().getPluginManager().registerEvents(gptResponseHandler, this);
 
         org.bukkit.configuration.file.FileConfiguration apiCfg =
