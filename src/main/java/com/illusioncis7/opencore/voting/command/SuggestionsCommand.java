@@ -42,7 +42,9 @@ public class SuggestionsCommand implements TabExecutor {
             Suggestion s = list.get(i);
             VoteWeights w = votingService.getVoteWeights(s.id);
             int remaining = (int) Math.max(0, w.requiredWeight - w.yesWeight);
-            String title = (s.description != null && !s.description.isEmpty()) ? s.description : s.text;
+            String title = s.newValue != null && !s.newValue.isEmpty()
+                    ? s.newValue
+                    : (s.description != null && !s.description.isEmpty() ? s.description : s.text);
             String progress = String.format("%.1f/%.1f yes", w.yesWeight, w.requiredWeight);
             if (remaining > 0) {
                 java.util.Map<String,String> ph = new HashMap<>();

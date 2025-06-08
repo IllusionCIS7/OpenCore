@@ -7,6 +7,7 @@ positive-weight-min: 1.0
 positive-weight-max: 20.0
 duration-minutes: 2880
 bar-length: 20
+broadcast-message: "vote.start"
 colors:
   yes: "&a"
   no: "&c"
