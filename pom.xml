@@ -44,10 +44,6 @@
                                     <pattern>org.mariadb</pattern>
                                     <shadedPattern>shaded.org.mariadb</shadedPattern>
                                 </relocation>
-                                <relocation>
-                                    <pattern>org.sqlite</pattern>
-                                    <shadedPattern>shaded.org.sqlite</shadedPattern>
-                                </relocation>
                             </relocations>
                         </configuration>
                     </execution>
