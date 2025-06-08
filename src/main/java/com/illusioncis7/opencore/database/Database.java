@@ -273,7 +273,8 @@ public class Database {
                     "impact_rating INT DEFAULT 5," +
                     "description TEXT," +
                     "value_type TEXT DEFAULT 'STRING'," +
-                    "current_value TEXT" +
+                    "current_value TEXT," +
+                    "UNIQUE(path, parameter_path)" +
                     ")";
             stmt.executeUpdate(cfgSql);
 
@@ -336,7 +337,8 @@ public class Database {
                     "suggestion_id INT NOT NULL," +
                     "player_uuid TEXT NOT NULL," +
                     "vote_yes BOOLEAN NOT NULL," +
-                    "weight DOUBLE NOT NULL" +
+                    "weight DOUBLE NOT NULL," +
+                    "UNIQUE(suggestion_id, player_uuid)" +
                     ")";
             stmt.executeUpdate(voteSql);
 
@@ -407,6 +409,20 @@ public class Database {
 
     public boolean isConnected() {
         return dataSource != null && !dataSource.isClosed();
+    }
+
+    /**
+     * @return true if the underlying database engine is SQLite.
+     */
+    public boolean isSQLite() {
+        return engine == Engine.SQLITE;
+    }
+
+    /**
+     * @return true if the underlying database engine is MariaDB.
+     */
+    public boolean isMariaDB() {
+        return engine == Engine.MARIADB;
     }
 
     public String getPrompt(String category) {

@@ -471,8 +471,15 @@ public class VotingService {
         if (weight <= 0.0) {
             return false;
         }
-        String sql = "INSERT INTO votes (suggestion_id, player_uuid, vote_yes, weight) VALUES (?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE vote_yes = VALUES(vote_yes), weight = VALUES(weight)";
+        String sql;
+        if (database.isSQLite()) {
+            sql = "INSERT INTO votes (suggestion_id, player_uuid, vote_yes, weight) VALUES (?, ?, ?, ?) " +
+                    "ON CONFLICT(suggestion_id, player_uuid) DO UPDATE SET " +
+                    "vote_yes=excluded.vote_yes, weight=excluded.weight";
+        } else {
+            sql = "INSERT INTO votes (suggestion_id, player_uuid, vote_yes, weight) VALUES (?, ?, ?, ?) " +
+                    "ON DUPLICATE KEY UPDATE vote_yes = VALUES(vote_yes), weight = VALUES(weight)";
+        }
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, suggestionId);

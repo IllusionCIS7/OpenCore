@@ -24,14 +24,26 @@ public class PolicyService {
 
     private void initTable() {
         if (!database.isConnected()) return;
-        String sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY," +
-                "name VARCHAR(50) NOT NULL," +
-                "policy_text TEXT NOT NULL," +
-                "version INT NOT NULL," +
-                "active BOOLEAN DEFAULT 1," +
-                "last_updated TIMESTAMP NOT NULL" +
-                ")";
+        String sql;
+        if (database.isSQLite()) {
+            sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "name TEXT NOT NULL," +
+                    "policy_text TEXT NOT NULL," +
+                    "version INT NOT NULL," +
+                    "active BOOLEAN DEFAULT 1," +
+                    "last_updated TIMESTAMP NOT NULL" +
+                    ")";
+        } else {
+            sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "name VARCHAR(50) NOT NULL," +
+                    "policy_text TEXT NOT NULL," +
+                    "version INT NOT NULL," +
+                    "active BOOLEAN DEFAULT 1," +
+                    "last_updated TIMESTAMP NOT NULL" +
+                    ")";
+        }
         try (Connection conn = database.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
