@@ -82,7 +82,8 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                         continue;
                     }
                     if (change < def.minChange || change > def.maxChange) {
-                        logger.warning("Change out of bounds for flag " + flag + ": " + change);
+                        change = def.maxChange;
+                        logger.warning("Change out of bounds for flag " + flag + ": " + change + " | Set it to " + def.maxChange);
                         continue;
                     }
                     UUID playerUuid = resolveAlias(alias);
