@@ -86,14 +86,17 @@ public class ConfigService {
     private void storeYaml(File file) {
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         Map<String, Object> values = cfg.getValues(true);
-        for (String key : values.keySet()) {
-            insertParameter(file.getAbsolutePath(), key);
+        String relative = serverRoot.relativize(file.getAbsoluteFile().toPath()).toString().replace(File.separatorChar, '/');
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            Object val = entry.getValue();
+            insertParameter(relative, entry.getKey(), val != null ? val.toString() : null);
         }
     }
 
     private void storeConf(File file) {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
+            String relative = serverRoot.relativize(file.getAbsoluteFile().toPath()).toString().replace(File.separatorChar, '/');
             while ((line = br.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#") || line.startsWith(";")) {
@@ -101,7 +104,7 @@ public class ConfigService {
                 }
                 String[] parts = line.split("[:=]", 2);
                 if (parts.length == 2) {
-                    insertParameter(file.getAbsolutePath(), parts[0].trim());
+                    insertParameter(relative, parts[0].trim(), parts[1].trim());
                 }
             }
         } catch (IOException e) {
@@ -109,13 +112,13 @@ public class ConfigService {
         }
     }
 
-    private void insertParameter(String path, String parameter) {
+    private void insertParameter(String path, String parameter, String value) {
         if (!database.isConnected()) {
             return;
         }
 
-        String sql = "INSERT INTO config_params (path, parameter_path, description, value_type) VALUES (?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE path = VALUES(path), description = VALUES(description)";
+        String sql = "INSERT INTO config_params (path, parameter_path, description, value_type, current_value) VALUES (?, ?, ?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE path = VALUES(path), current_value = VALUES(current_value), description = VALUES(description)";
 
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -123,6 +126,11 @@ public class ConfigService {
             ps.setString(2, parameter);
             ps.setNull(3, Types.VARCHAR);
             ps.setString(4, ConfigType.STRING.name());
+            if (value != null) {
+                ps.setString(5, value);
+            } else {
+                ps.setNull(5, Types.VARCHAR);
+            }
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().warning("Failed to store config parameter " + parameter + ": " + e.getMessage());
@@ -158,10 +166,11 @@ public class ConfigService {
                         plugin.getLogger().warning("Invalid value for parameter " + id);
                         return false;
                     }
-                    File file = new File(path);
+                    File file = serverRoot.resolve(path).toFile();
                     Object oldVal = loadValue(file, param);
                     boolean ok = updateFile(file, param, typed);
                     if (ok) {
+                        updateStoredValue(id, newValue);
                         logChange(id, oldVal, newValue, changedBy);
                     }
                     return ok;
@@ -288,6 +297,23 @@ public class ConfigService {
         }
     }
 
+    private void updateStoredValue(int id, String value) {
+        if (!database.isConnected()) return;
+        String sql = "UPDATE config_params SET current_value = ? WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (value != null) {
+                ps.setString(1, value);
+            } else {
+                ps.setNull(1, Types.VARCHAR);
+            }
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to update stored value: " + e.getMessage());
+        }
+    }
+
     /**
      * Rollback a change by applying the stored old value.
      */
@@ -316,7 +342,7 @@ public class ConfigService {
     public java.util.List<ConfigParameter> listParameters() {
         java.util.List<ConfigParameter> list = new java.util.ArrayList<>();
         if (!database.isConnected()) return list;
-        String sql = "SELECT id, path, parameter_path, editable, impact_rating, value_type FROM config_params";
+        String sql = "SELECT id, path, parameter_path, editable, impact_rating, value_type, current_value FROM config_params";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -333,8 +359,13 @@ public class ConfigService {
                 if (vt != null) {
                     try { p.setValueType(ConfigType.valueOf(vt.toUpperCase())); } catch (IllegalArgumentException ignore) {}
                 }
-                Object val = loadValue(new File(path), param);
-                p.setCurrentValue(val != null ? val.toString() : null);
+                String currentVal = rs.getString(7);
+                if (currentVal == null) {
+                    File file = serverRoot.resolve(path).toFile();
+                    Object val = loadValue(file, param);
+                    currentVal = val != null ? val.toString() : null;
+                }
+                p.setCurrentValue(currentVal);
                 list.add(p);
             }
         } catch (SQLException e) {
