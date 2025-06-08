@@ -32,7 +32,9 @@ public class GptLogCommand implements TabExecutor {
             sender.sendMessage("No GPT responses found.");
             return true;
         }
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter fmt = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault());
         for (GptResponseRecord rec : list) {
             String time = fmt.format(rec.timestamp);
             String prefix = rec.module != null ? "[" + rec.module + "] " : "";
