@@ -167,7 +167,7 @@ public class OpenCore extends JavaPlugin {
             public void run() {
                 votingService.checkOpenSuggestions();
             }
-        }.runTaskTimer(this, 0L, 30 * 60 * 20L);
+        }.runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook), this);
