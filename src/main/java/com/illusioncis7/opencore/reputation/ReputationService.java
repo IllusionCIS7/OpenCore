@@ -72,6 +72,12 @@ public class ReputationService {
         }
     }
 
+    /** Reload configuration values from reputation.yml. */
+    public synchronized void reload() {
+        ranges.clear();
+        loadConfig();
+    }
+
     public int computeChange(String key, double value) {
         Range r = ranges.get(key);
         if (r == null) return 0;

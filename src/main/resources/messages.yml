@@ -98,6 +98,10 @@ gptlog:
   none: "&cKeine GPT-Antworten gefunden."
   entry: "&7{time} {prefix}{response}"
 
+reload:
+  success: "&aKonfiguration neu geladen."
+  failed: "&cReload fehlgeschlagen."
+
 response:
   module: "&e[{module}] {text}"
   plain: "{text}"
