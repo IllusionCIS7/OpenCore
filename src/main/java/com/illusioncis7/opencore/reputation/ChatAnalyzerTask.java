@@ -51,7 +51,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         }
         StringBuilder data = new StringBuilder();
         for (ChatMessage msg : messages) {
-            data.append("[" + msg.id + "] " + msg.aliasId + ": " + msg.message + "\n");
+            data.append("[" + msg.aliasId + "]" + ": " + msg.message + "\n");
         }
         java.util.Map<String, String> vars = new java.util.HashMap<>();
         vars.put("message", data.toString());

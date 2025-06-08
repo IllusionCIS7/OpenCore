@@ -58,7 +58,7 @@ public class VoteCommand implements TabExecutor {
             }
             if (votingService.isSuggestionOpen(id)) {
                 com.illusioncis7.opencore.voting.VotingService.VoteWeights w = votingService.getVoteWeights(id);
-                int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
+                int remaining = (int) Math.max(0, w.requiredWeight - w.yesWeight);
                 if (remaining > 0) {
                     java.util.Map<String,String> ph = new HashMap<>();
                     ph.put("remaining", String.valueOf(remaining));
