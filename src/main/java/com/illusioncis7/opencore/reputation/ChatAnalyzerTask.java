@@ -154,7 +154,9 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         if (!database.isConnected()) {
             return list;
         }
-        String sql = "SELECT id, player_uuid, message, message_time FROM chat_log WHERE message_time > ?";
+        String sql = "SELECT c.id, c.player_uuid, p.alias_id, c.message, c.message_time " +
+                     "FROM chat_log c LEFT JOIN player_registry p ON c.player_uuid = p.uuid " +
+                     "WHERE c.message_time > ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setTimestamp(1, Timestamp.from(since));
@@ -162,9 +164,9 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                 while (rs.next()) {
                     long id = rs.getLong(1);
                     UUID player = UUID.fromString(rs.getString(2));
-                    String message = rs.getString(3);
-                    Timestamp time = rs.getTimestamp(4);
-                    String alias = getAlias(player);
+                    String alias = rs.getString(3);
+                    String message = rs.getString(4);
+                    Timestamp time = rs.getTimestamp(5);
                     list.add(new ChatMessage(id, player, alias, message, time.toInstant()));
                 }
             }

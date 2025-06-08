@@ -43,7 +43,8 @@ public class Database {
                 File dbFile = new File(plugin.getDataFolder(), file);
                 hikariConfig.setDriverClassName("org.sqlite.JDBC");
                 hikariConfig.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
-                hikariConfig.setMaximumPoolSize(1);
+                // allow a second connection so tasks can reuse the pool
+                hikariConfig.setMaximumPoolSize(2);
             } else {
                 String host = config.getString("host", "localhost");
                 int port = config.getInt("port", 3306);
