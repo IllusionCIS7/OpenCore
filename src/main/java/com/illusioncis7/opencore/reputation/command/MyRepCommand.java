@@ -32,7 +32,9 @@ public class MyRepCommand implements TabExecutor {
         sender.sendMessage("Your reputation: " + rep);
         List<ReputationEvent> hist = reputationService.getHistory(uuid);
         int start = Math.max(0, hist.size() - 3);
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter fmt = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault());
         for (int i = hist.size() - 1; i >= start; i--) {
             ReputationEvent ev = hist.get(i);
             String time = fmt.format(ev.timestamp);

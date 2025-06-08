@@ -45,7 +45,9 @@ public class RuleHistoryCommand implements TabExecutor {
         page = Math.max(1, Math.min(page, pages));
         int start = (page - 1) * 5;
         int end = Math.min(start + 5, hist.size());
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter fmt = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault());
         for (int i = start; i < end; i++) {
             RuleChange rc = hist.get(i);
             String time = fmt.format(rc.changedAt);

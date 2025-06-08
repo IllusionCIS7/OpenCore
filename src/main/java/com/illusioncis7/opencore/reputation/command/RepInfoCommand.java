@@ -47,7 +47,9 @@ public class RepInfoCommand implements TabExecutor {
         List<ReputationEvent> hist = reputationService.getHistory(uuid);
         int pages = (hist.size() + 4) / 5;
         page = Math.max(1, Math.min(page, pages));
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter fmt = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault());
         int start = (page - 1) * 5;
         int end = Math.min(start + 5, hist.size());
         for (int i = start; i < end; i++) {
