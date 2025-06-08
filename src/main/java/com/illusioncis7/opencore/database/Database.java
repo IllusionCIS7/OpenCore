@@ -36,13 +36,13 @@ public class Database {
             String url = "jdbc:mariadb://" + host + ":" + port + "/" + database + "?useSSL=false";
 
             HikariConfig hikariConfig = new HikariConfig();
+            hikariConfig.setDriverClassName("shaded.org.mariadb.jdbc.Driver");
             hikariConfig.setJdbcUrl(url);
             hikariConfig.setUsername(username);
             hikariConfig.setPassword(password);
             hikariConfig.setMaximumPoolSize(10);
             hikariConfig.setConnectionTimeout(5000);
             hikariConfig.setLeakDetectionThreshold(10000);
-
             dataSource = new HikariDataSource(hikariConfig);
 
             try (Connection conn = dataSource.getConnection();
