@@ -89,7 +89,7 @@ public class ReputationService {
     }
 
     public synchronized void adjustReputation(UUID playerUuid, int delta, String reason, String source, String detailsJson) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         if (delta == 0) {
@@ -120,7 +120,7 @@ public class ReputationService {
      * @param newValue   new reputation value
      */
     public synchronized void setReputation(UUID playerUuid, int newValue) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         newValue = Math.max(minScore, Math.min(maxScore, newValue));
@@ -156,7 +156,7 @@ public class ReputationService {
      * Fetch a specific reputation event.
      */
     public synchronized ReputationEvent getEvent(UUID eventId) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "SELECT timestamp, player_uuid, change, reason_summary, source_module, details FROM reputation_events WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -213,7 +213,7 @@ public class ReputationService {
     }
 
     public synchronized int getReputation(UUID playerUuid) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return 0;
         }
         String sql = "SELECT reputation_score FROM player_registry WHERE uuid = ?";
@@ -233,7 +233,7 @@ public class ReputationService {
 
     public synchronized List<ReputationEvent> getHistory(UUID playerUuid) {
         List<ReputationEvent> list = new ArrayList<>();
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return list;
         }
         String sql = "SELECT id, timestamp, change, reason_summary, source_module, details FROM reputation_events WHERE player_uuid = ? ORDER BY timestamp";
@@ -262,7 +262,7 @@ public class ReputationService {
      */
     public synchronized List<PlayerReputation> listReputations() {
         List<PlayerReputation> list = new ArrayList<>();
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return list;
         }
         String sql = "SELECT uuid, reputation_score FROM player_registry";
@@ -286,7 +286,7 @@ public class ReputationService {
      * with a random alias and reputation score of 0.
      */
     public synchronized void registerPlayer(UUID playerUuid) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         try (Connection conn = database.getConnection()) {

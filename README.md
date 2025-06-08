@@ -18,5 +18,18 @@ Ein modulares Bukkit-Plugin für Paper 1.21.4, das demokratische Communitysteuer
 - Bukkit Scheduler (async)
 - YAML- und JSON-Konfigurationen
 
+## Datenbankeinrichtung
+In der `database.yml` werden die Zugangsdaten für die MariaDB hinterlegt:
+
+```yml
+host: localhost
+port: 3306
+database: opencore
+username: root
+password: password
+```
+
+OpenCore nutzt einen HikariCP-Pool mit zehn Verbindungen. Beim Start wird ein Ping ausgeführt und im Log ausgegeben.
+
 ## 🧠 Ziel
 Ein Server, der durch Spieler gesteuert, durch GPT unterstützt und durch klare Regeln geschützt wird.

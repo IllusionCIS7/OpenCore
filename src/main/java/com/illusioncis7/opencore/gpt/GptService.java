@@ -253,7 +253,7 @@ public class GptService {
     }
 
     private void logRequest(GptRequest request) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "INSERT INTO gpt_log (request_uuid, player_uuid, request_time, prompt) VALUES (?, ?, ?, ?)";
@@ -274,7 +274,7 @@ public class GptService {
     }
 
     private void logResponse(UUID requestId, String response) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "UPDATE gpt_log SET response = ?, response_time = ? WHERE request_uuid = ?";

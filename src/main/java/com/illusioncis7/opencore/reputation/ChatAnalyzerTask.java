@@ -113,7 +113,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
     }
 
     private UUID resolveAlias(String alias) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "SELECT uuid FROM player_registry WHERE alias_id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -150,7 +150,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
 
     private List<ChatMessage> loadMessages(Instant since) {
         List<ChatMessage> list = new ArrayList<>();
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return list;
         }
         String sql = "SELECT id, player_uuid, message, message_time FROM chat_log WHERE message_time > ?";
@@ -174,7 +174,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
     }
 
     private String getAlias(UUID uuid) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "SELECT alias_id FROM player_registry WHERE uuid = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -191,7 +191,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
     }
 
     private void logAnalysis(String chatlog, String json, java.util.Set<UUID> players) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "INSERT INTO chat_analysis_log (timestamp, chatlog, json, betroffene_spieler) VALUES (?, ?, ?, ?)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
