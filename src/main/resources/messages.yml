@@ -1,0 +1,99 @@
+rulehistory:
+  usage: "&cUsage: /rulehistory <id> [page]"
+  invalid_id: "&cInvalid id."
+  no_history: "&cNo history found."
+  entry: "&7{time} &8by &e{changer}&7: {text}"
+  page: "&7Page {page}/{pages}"
+
+editrule:
+  usage: "&cUsage: /editrule <id> <new text>"
+  invalid_id: "&cInvalid id."
+  updated: "&aRule updated."
+  failed: "&cFailed to update rule."
+
+rules:
+  not_found: "&cRule not found."
+  entry: "&e#{id} [&6{category}&e]: {text}"
+  invalid_id: "&cInvalid id."
+  none: "&cNo rules defined."
+  page: "&7Page {page}/{pages}"
+
+configlist:
+  none: "&cNo parameters found."
+  entry: "&e#{id} {param}= {value} editable={editable} impact={impact}"
+
+rollbackconfig:
+  usage: "&cUsage: /rollbackconfig <changeId>"
+  success: "&aRollback executed."
+  failed: "&cRollback failed."
+  invalid_id: "&cInvalid id."
+
+reputation:
+  players_only: "&cPlayers only."
+  your_rep: "&aYour reputation: {rep}"
+  event: "&7{time} - {reason} [&e{module}&7] ({change})"
+  admin_only: "&cAdmins only."
+  repinfo_usage: "&cUsage: /repinfo <player> [page]"
+  player_not_found: "&cPlayer not found."
+  player_rep: "&e{player} reputation: {rep}"
+  page: "&7Page {page}/{pages}"
+  repchange_usage: "&cUsage: /repchange <eventId>"
+  change_not_found: "&cChange not found."
+  change_player: "&ePlayer: {player}"
+  change_value: "&eValue: {value}"
+  change_reason: "&eReason: {reason}"
+  change_module: "&eGPT-Kategorie: {module}"
+  invalid_id: "&cInvalid id."
+
+chatflags:
+  none: "&cNo flags defined."
+  entry: "&e{code}: {min}..{max} ({state}) - {desc}"
+  usage_set: "&cUsage: /chatflags set <CODE> <min> <max>"
+  updated: "&aFlag updated."
+  update_failed: "&cUpdate failed."
+  invalid_numbers: "&cInvalid numbers."
+  usage: "&cUsage: /chatflags list | set <CODE> <min> <max>"
+
+suggest:
+  players_only: "&cPlayers only."
+  rate_limit: "&cYou can submit only one suggestion every 5 minutes."
+  usage: "&cUsage: /suggest <text>"
+  too_short: "&cSuggestion too short."
+  similar: "&c\u00C4hnlicher Vorschlag existiert bereits."
+  failed: "&cFailed to submit suggestion."
+  success: "&aSuggestion submitted with ID {id}."
+
+suggestions:
+  none: "&cNo open suggestions."
+  entry_need: "&e#{id} - {title} [&f{progress}&e] {remaining} votes needed"
+  entry_quorum: "&e#{id} - {title} [&f{progress}&e] quorum reached"
+  page: "&7Page {page}/{pages}"
+
+vote:
+  players_only: "&cPlayers only."
+  usage: "&cUsage: /vote <id> <yes|no>"
+  already: "&cDu hast bereits abgestimmt."
+  unknown: "&cUnknown or closed suggestion."
+  remaining: "&eNoch {remaining} Stimmen n\u00F6tig."
+  quorum: "&aQuorum erreicht \u2013 Voting endet"
+  concluded: "&aVoting concluded."
+  invalid_id: "&cInvalid id."
+
+votestatus:
+  none: "&cKeine abgeschlossenen Vorschl\u00E4ge."
+  entry: "&e#{id} - {title} -> {result}{change}"
+
+status:
+  queue: "&eGPT queue: {queue}"
+  open: "&eOpen suggestions: {open}"
+  ping: "&eDB ping: {ping}"
+  last: "&eLast GPT response: {last}"
+
+gptlog:
+  players_only: "&cPlayers only."
+  none: "&cNo GPT responses found."
+  entry: "&7{time} {prefix}{response}"
+
+response:
+  module: "&e[{module}] {text}"
+  plain: "{text}"

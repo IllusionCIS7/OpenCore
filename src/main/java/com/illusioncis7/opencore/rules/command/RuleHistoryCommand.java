@@ -6,6 +6,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -22,14 +24,14 @@ public class RuleHistoryCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage("Usage: /rulehistory <id> [page]");
+            OpenCore.getInstance().getMessageService().send(sender, "rulehistory.usage", null);
             return true;
         }
         int id;
         try {
             id = Integer.parseInt(args[0]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("Invalid id.");
+            OpenCore.getInstance().getMessageService().send(sender, "rulehistory.invalid_id", null);
             return true;
         }
         int page = 1;
@@ -38,7 +40,7 @@ public class RuleHistoryCommand implements TabExecutor {
         }
         List<RuleChange> hist = ruleService.getHistory(id);
         if (hist.isEmpty()) {
-            sender.sendMessage("No history found.");
+            OpenCore.getInstance().getMessageService().send(sender, "rulehistory.no_history", null);
             return true;
         }
         int pages = (hist.size() + 4) / 5;
@@ -52,9 +54,16 @@ public class RuleHistoryCommand implements TabExecutor {
             RuleChange rc = hist.get(i);
             String time = fmt.format(rc.changedAt);
             String changer = rc.changedBy != null ? Bukkit.getOfflinePlayer(rc.changedBy).getName() : "system";
-            sender.sendMessage(time + " by " + changer + ": " + rc.newText);
+            java.util.Map<String, String> ph = new HashMap<>();
+            ph.put("time", time);
+            ph.put("changer", changer);
+            ph.put("text", rc.newText);
+            OpenCore.getInstance().getMessageService().send(sender, "rulehistory.entry", ph);
         }
-        sender.sendMessage("Page " + page + "/" + pages);
+        java.util.Map<String, String> ph = new HashMap<>();
+        ph.put("page", String.valueOf(page));
+        ph.put("pages", String.valueOf(pages));
+        OpenCore.getInstance().getMessageService().send(sender, "rulehistory.page", ph);
         return true;
     }
 

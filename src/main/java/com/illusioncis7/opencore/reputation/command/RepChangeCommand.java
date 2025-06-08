@@ -7,6 +7,8 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.UUID;
 import java.util.Collections;
@@ -24,28 +26,36 @@ public class RepChangeCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage("Admins only.");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.admin_only", null);
             return true;
         }
         if (args.length < 1) {
-            sender.sendMessage("Usage: /repchange <eventId>");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.repchange_usage", null);
             return true;
         }
         try {
             UUID id = UUID.fromString(args[0]);
             ReputationEvent ev = reputationService.getEvent(id);
             if (ev == null) {
-                sender.sendMessage("Change not found.");
+                OpenCore.getInstance().getMessageService().send(sender, "reputation.change_not_found", null);
                 return true;
             }
             OfflinePlayer p = Bukkit.getOfflinePlayer(ev.playerUuid);
             String name = p != null ? p.getName() : ev.playerUuid.toString();
-            sender.sendMessage("Player: " + name);
-            sender.sendMessage("Value: " + (ev.change >= 0 ? "+" : "") + ev.change);
-            sender.sendMessage("Reason: " + ev.reasonSummary);
-            sender.sendMessage("GPT-Kategorie: " + ev.sourceModule);
+            java.util.Map<String,String> ph = new HashMap<>();
+            ph.put("player", name);
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.change_player", ph);
+            ph = new HashMap<>();
+            ph.put("value", (ev.change >= 0 ? "+" : "") + String.valueOf(ev.change));
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.change_value", ph);
+            ph = new HashMap<>();
+            ph.put("reason", ev.reasonSummary);
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.change_reason", ph);
+            ph = new HashMap<>();
+            ph.put("module", ev.sourceModule);
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.change_module", ph);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid ID format.");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.invalid_id", null);
         }
         return true;
     }

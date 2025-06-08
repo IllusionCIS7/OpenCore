@@ -4,6 +4,7 @@ import com.illusioncis7.opencore.config.ConfigService;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
 
 import java.util.UUID;
 
@@ -23,18 +24,18 @@ public class RollbackConfigCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage("Usage: /rollbackconfig <changeId>");
+            OpenCore.getInstance().getMessageService().send(sender, "rollbackconfig.usage", null);
             return true;
         }
         try {
             UUID id = UUID.fromString(args[0]);
             if (configService.rollbackChange(id)) {
-                sender.sendMessage("Rollback executed.");
+                OpenCore.getInstance().getMessageService().send(sender, "rollbackconfig.success", null);
             } else {
-                sender.sendMessage("Rollback failed.");
+                OpenCore.getInstance().getMessageService().send(sender, "rollbackconfig.failed", null);
             }
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid id.");
+            OpenCore.getInstance().getMessageService().send(sender, "rollbackconfig.invalid_id", null);
         }
         return true;
     }

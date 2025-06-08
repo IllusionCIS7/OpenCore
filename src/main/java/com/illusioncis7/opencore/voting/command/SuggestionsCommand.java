@@ -6,6 +6,8 @@ import com.illusioncis7.opencore.voting.VotingService.VoteWeights;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -28,7 +30,7 @@ public class SuggestionsCommand implements TabExecutor {
         }
         List<Suggestion> list = votingService.getOpenSuggestions();
         if (list.isEmpty()) {
-            sender.sendMessage("No open suggestions.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggestions.none", null);
             return true;
         }
         int pages = (list.size() + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -42,12 +44,24 @@ public class SuggestionsCommand implements TabExecutor {
             String title = (s.description != null && !s.description.isEmpty()) ? s.description : s.text;
             String progress = w.yesWeight + "/" + w.requiredWeight + " yes";
             if (remaining > 0) {
-                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] " + remaining + " votes needed");
+                java.util.Map<String,String> ph = new HashMap<>();
+                ph.put("id", String.valueOf(s.id));
+                ph.put("title", title);
+                ph.put("progress", progress);
+                ph.put("remaining", String.valueOf(remaining));
+                OpenCore.getInstance().getMessageService().send(sender, "suggestions.entry_need", ph);
             } else {
-                sender.sendMessage("#" + s.id + " - " + title + " [" + progress + "] quorum reached");
+                java.util.Map<String,String> ph = new HashMap<>();
+                ph.put("id", String.valueOf(s.id));
+                ph.put("title", title);
+                ph.put("progress", progress);
+                OpenCore.getInstance().getMessageService().send(sender, "suggestions.entry_quorum", ph);
             }
         }
-        sender.sendMessage("Page " + page + "/" + pages);
+        java.util.Map<String,String> ph = new HashMap<>();
+        ph.put("page", String.valueOf(page));
+        ph.put("pages", String.valueOf(pages));
+        OpenCore.getInstance().getMessageService().send(sender, "suggestions.page", ph);
         return true;
     }
 

@@ -6,6 +6,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 import org.bukkit.entity.Player;
 
 import java.time.format.DateTimeFormatter;
@@ -24,16 +26,16 @@ public class RepInfoCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage("Admins only.");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.admin_only", null);
             return true;
         }
         if (args.length < 1) {
-            sender.sendMessage("Usage: /repinfo <player> [page]");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.repinfo_usage", null);
             return true;
         }
         Player target = Bukkit.getPlayer(args[0]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.player_not_found", null);
             return true;
         }
         UUID uuid = target.getUniqueId();
@@ -43,7 +45,10 @@ public class RepInfoCommand implements TabExecutor {
             try { page = Integer.parseInt(args[1]); } catch (NumberFormatException ignore) {}
         }
 
-        sender.sendMessage(target.getName() + " reputation: " + rep);
+        java.util.Map<String,String> head = new HashMap<>();
+        head.put("player", target.getName());
+        head.put("rep", String.valueOf(rep));
+        OpenCore.getInstance().getMessageService().send(sender, "reputation.player_rep", head);
         List<ReputationEvent> hist = reputationService.getHistory(uuid);
         int pages = (hist.size() + 4) / 5;
         page = Math.max(1, Math.min(page, pages));
@@ -55,9 +60,16 @@ public class RepInfoCommand implements TabExecutor {
         for (int i = start; i < end; i++) {
             ReputationEvent ev = hist.get(i);
             String time = fmt.format(ev.timestamp);
-            sender.sendMessage(time + " - " + ev.reasonSummary + " (" + (ev.change >= 0 ? "+" : "") + ev.change + ")");
+            java.util.Map<String,String> ph = new HashMap<>();
+            ph.put("time", time);
+            ph.put("reason", ev.reasonSummary);
+            ph.put("change", (ev.change >= 0 ? "+" : "") + String.valueOf(ev.change));
+            OpenCore.getInstance().getMessageService().send(sender, "reputation.event", ph);
         }
-        sender.sendMessage("Page " + page + "/" + pages);
+        java.util.Map<String,String> pmap = new HashMap<>();
+        pmap.put("page", String.valueOf(page));
+        pmap.put("pages", String.valueOf(pages));
+        OpenCore.getInstance().getMessageService().send(sender, "reputation.page", pmap);
         return true;
     }
 
