@@ -19,9 +19,11 @@ Ein modulares Bukkit-Plugin für Paper 1.21.4, das demokratische Communitysteuer
 - YAML- und JSON-Konfigurationen
 
 ## Datenbankeinrichtung
-In der `database.yml` werden die Zugangsdaten für die MariaDB hinterlegt:
+In der `database.yml` kann zwischen einer lokalen SQLite-Datei und einer MariaDB gewählt werden. Standard ist SQLite:
 
 ```yml
+engine: sqlite # oder "mariadb"
+file: opencore.db
 host: localhost
 port: 3306
 database: opencore

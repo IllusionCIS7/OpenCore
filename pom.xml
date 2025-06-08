@@ -44,6 +44,10 @@
                                     <pattern>org.mariadb</pattern>
                                     <shadedPattern>shaded.org.mariadb</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.sqlite</pattern>
+                                    <shadedPattern>shaded.org.sqlite</shadedPattern>
+                                </relocation>
                             </relocations>
                         </configuration>
                     </execution>
@@ -79,6 +83,11 @@
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>3.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.45.1.0</version>
         </dependency>
         <dependency>
             <groupId>com.zaxxer</groupId>

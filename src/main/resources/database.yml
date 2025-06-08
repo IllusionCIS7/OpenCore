@@ -1,4 +1,6 @@
 # Datenbankkonfiguration
+engine: sqlite # "sqlite" oder "mariadb"
+file: opencore.db
 host: localhost
 port: 3306
 database: opencore
