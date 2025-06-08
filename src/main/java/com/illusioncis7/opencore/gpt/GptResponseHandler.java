@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import com.illusioncis7.opencore.OpenCore;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.Connection;
@@ -42,7 +43,14 @@ public class GptResponseHandler implements Listener {
         }
         Player player = Bukkit.getPlayer(request.playerUuid);
         if (player != null && player.isOnline()) {
-            player.sendMessage(response);
+            java.util.Map<String,String> ph = new java.util.HashMap<>();
+            ph.put("text", response);
+            if (request.module != null && !request.module.isEmpty()) {
+                ph.put("module", request.module);
+                OpenCore.getInstance().getMessageService().send(player, "response.module", ph);
+            } else {
+                OpenCore.getInstance().getMessageService().send(player, "response.plain", ph);
+            }
         } else {
             storeResponse(request.playerUuid, request.module, response);
         }
@@ -86,10 +94,13 @@ public class GptResponseHandler implements Listener {
                     int id = rs.getInt(1);
                     String module = rs.getString(2);
                     String text = rs.getString(3);
+                    java.util.Map<String,String> ph = new java.util.HashMap<>();
+                    ph.put("text", text);
                     if (module != null && !module.isEmpty()) {
-                        player.sendMessage("[" + module + "] " + text);
+                        ph.put("module", module);
+                        OpenCore.getInstance().getMessageService().send(player, "response.module", ph);
                     } else {
-                        player.sendMessage(text);
+                        OpenCore.getInstance().getMessageService().send(player, "response.plain", ph);
                     }
                     markDelivered(id);
                 }

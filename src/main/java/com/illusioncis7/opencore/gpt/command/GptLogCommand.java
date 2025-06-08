@@ -6,6 +6,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -23,13 +25,13 @@ public class GptLogCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Players only.");
+            OpenCore.getInstance().getMessageService().send(sender, "gptlog.players_only", null);
             return true;
         }
         UUID uuid = ((Player) sender).getUniqueId();
         List<GptResponseRecord> list = handler.getRecentResponses(uuid, 5);
         if (list.isEmpty()) {
-            sender.sendMessage("No GPT responses found.");
+            OpenCore.getInstance().getMessageService().send(sender, "gptlog.none", null);
             return true;
         }
         DateTimeFormatter fmt = DateTimeFormatter
@@ -37,8 +39,11 @@ public class GptLogCommand implements TabExecutor {
                 .withZone(java.time.ZoneId.systemDefault());
         for (GptResponseRecord rec : list) {
             String time = fmt.format(rec.timestamp);
-            String prefix = rec.module != null ? "[" + rec.module + "] " : "";
-            sender.sendMessage(time + " " + prefix + rec.response);
+            java.util.Map<String,String> ph = new HashMap<>();
+            ph.put("time", time);
+            ph.put("prefix", rec.module != null ? "[" + rec.module + "] " : "");
+            ph.put("response", rec.response);
+            OpenCore.getInstance().getMessageService().send(sender, "gptlog.entry", ph);
         }
         return true;
     }

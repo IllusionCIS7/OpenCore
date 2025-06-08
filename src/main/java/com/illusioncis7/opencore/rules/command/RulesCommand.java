@@ -5,6 +5,8 @@ import com.illusioncis7.opencore.rules.RuleService;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -24,12 +26,16 @@ public class RulesCommand implements TabExecutor {
                 int id = Integer.parseInt(args[1]);
                 Rule r = ruleService.getRule(id);
                 if (r == null) {
-                    sender.sendMessage("Rule not found.");
+                    OpenCore.getInstance().getMessageService().send(sender, "rules.not_found", null);
                 } else {
-                    sender.sendMessage("#" + r.id + " [" + r.category + "]: " + r.text);
+                    java.util.Map<String,String> ph = new HashMap<>();
+                    ph.put("id", String.valueOf(r.id));
+                    ph.put("category", r.category);
+                    ph.put("text", r.text);
+                    OpenCore.getInstance().getMessageService().send(sender, "rules.entry", ph);
                 }
             } catch (NumberFormatException e) {
-                sender.sendMessage("Invalid id.");
+                OpenCore.getInstance().getMessageService().send(sender, "rules.invalid_id", null);
             }
             return true;
         }
@@ -41,7 +47,7 @@ public class RulesCommand implements TabExecutor {
 
         List<Rule> rules = ruleService.getRules();
         if (rules.isEmpty()) {
-            sender.sendMessage("No rules defined.");
+            OpenCore.getInstance().getMessageService().send(sender, "rules.none", null);
             return true;
         }
         int pages = (rules.size() + 4) / 5;
@@ -50,9 +56,16 @@ public class RulesCommand implements TabExecutor {
         int end = Math.min(start + 5, rules.size());
         for (int i = start; i < end; i++) {
             Rule r = rules.get(i);
-            sender.sendMessage("#" + r.id + " [" + r.category + "]: " + r.text);
+            java.util.Map<String,String> ph = new HashMap<>();
+            ph.put("id", String.valueOf(r.id));
+            ph.put("category", r.category);
+            ph.put("text", r.text);
+            OpenCore.getInstance().getMessageService().send(sender, "rules.entry", ph);
         }
-        sender.sendMessage("Page " + page + "/" + pages);
+        java.util.Map<String,String> ph = new HashMap<>();
+        ph.put("page", String.valueOf(page));
+        ph.put("pages", String.valueOf(pages));
+        OpenCore.getInstance().getMessageService().send(sender, "rules.page", ph);
         return true;
     }
 

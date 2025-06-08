@@ -22,6 +22,7 @@ import com.illusioncis7.opencore.config.command.RollbackConfigCommand;
 import com.illusioncis7.opencore.config.command.ConfigListCommand;
 import com.illusioncis7.opencore.admin.StatusCommand;
 import com.illusioncis7.opencore.plan.PlanHook;
+import com.illusioncis7.opencore.message.MessageService;
 import java.io.File;
 import java.util.Objects;
 
@@ -42,6 +43,7 @@ public class OpenCore extends JavaPlugin {
     private ChatReputationFlagService chatFlagService;
     private VotingService votingService;
     private PlanHook planHook;
+    private MessageService messageService;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
 
@@ -59,10 +61,13 @@ public class OpenCore extends JavaPlugin {
         saveResource("reputation.yml", false);
         saveResource("voting.yml", false);
         saveResource("api.yml", false);
+        saveResource("messages.yml", false);
         saveResource("webpanel/index.html", false);
 
         database = new Database(this);
         database.connect();
+
+        messageService = new MessageService(this);
 
         reputationService = new ReputationService(this, database);
         chatFlagService = new ChatReputationFlagService(this, database);
@@ -223,6 +228,10 @@ public class OpenCore extends JavaPlugin {
 
     public VotingService getVotingService() {
         return votingService;
+    }
+
+    public MessageService getMessageService() {
+        return messageService;
     }
 
     public com.illusioncis7.opencore.setup.SetupManager getSetupManager() {

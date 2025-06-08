@@ -5,6 +5,8 @@ import com.illusioncis7.opencore.config.ConfigService;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.List;
 
@@ -21,13 +23,18 @@ public class ConfigListCommand implements TabExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         List<ConfigParameter> list = configService.listParameters();
         if (list.isEmpty()) {
-            sender.sendMessage("No parameters found.");
+            OpenCore.getInstance().getMessageService().send(sender, "configlist.none", null);
             return true;
         }
         for (ConfigParameter p : list) {
             String value = p.getCurrentValue() != null ? p.getCurrentValue() : "null";
-            sender.sendMessage("#" + p.getId() + " " + p.getParameterPath() + " = " + value +
-                    " editable=" + p.isEditable() + " impact=" + p.getImpactRating());
+            java.util.Map<String, String> ph = new HashMap<>();
+            ph.put("id", String.valueOf(p.getId()));
+            ph.put("param", p.getParameterPath());
+            ph.put("value", value);
+            ph.put("editable", String.valueOf(p.isEditable()));
+            ph.put("impact", String.valueOf(p.getImpactRating()));
+            OpenCore.getInstance().getMessageService().send(sender, "configlist.entry", ph);
         }
         return true;
     }

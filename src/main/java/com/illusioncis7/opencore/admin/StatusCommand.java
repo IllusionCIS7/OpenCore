@@ -7,6 +7,8 @@ import com.illusioncis7.opencore.voting.VotingService;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.Collections;
 
@@ -30,10 +32,18 @@ public class StatusCommand implements TabExecutor {
         int open = votingService.getOpenSuggestions().size();
         long ping = database.ping();
         long last = gptService.getLastResponseDuration();
-        sender.sendMessage("GPT queue: " + queue);
-        sender.sendMessage("Open suggestions: " + open);
-        sender.sendMessage("DB ping: " + (ping >= 0 ? ping + " ms" : "n/a"));
-        sender.sendMessage("Last GPT response: " + (last >= 0 ? last + " ms" : "n/a"));
+        java.util.Map<String,String> ph = new HashMap<>();
+        ph.put("queue", String.valueOf(queue));
+        OpenCore.getInstance().getMessageService().send(sender, "status.queue", ph);
+        ph = new HashMap<>();
+        ph.put("open", String.valueOf(open));
+        OpenCore.getInstance().getMessageService().send(sender, "status.open", ph);
+        ph = new HashMap<>();
+        ph.put("ping", ping >= 0 ? ping + " ms" : "n/a");
+        OpenCore.getInstance().getMessageService().send(sender, "status.ping", ph);
+        ph = new HashMap<>();
+        ph.put("last", last >= 0 ? last + " ms" : "n/a");
+        OpenCore.getInstance().getMessageService().send(sender, "status.last", ph);
         return true;
     }
 

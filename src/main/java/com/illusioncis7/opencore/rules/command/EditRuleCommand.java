@@ -4,6 +4,8 @@ import com.illusioncis7.opencore.rules.RuleService;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 import org.bukkit.entity.Player;
 
 import java.util.Arrays;
@@ -22,22 +24,22 @@ public class EditRuleCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage("Usage: /editrule <id> <new text>");
+            OpenCore.getInstance().getMessageService().send(sender, "editrule.usage", null);
             return true;
         }
         int id;
         try {
             id = Integer.parseInt(args[0]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("Invalid id.");
+            OpenCore.getInstance().getMessageService().send(sender, "editrule.invalid_id", null);
             return true;
         }
         String newText = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
         UUID changer = sender instanceof Player ? ((Player) sender).getUniqueId() : null;
         if (ruleService.updateRule(id, newText, changer, null)) {
-            sender.sendMessage("Rule updated.");
+            OpenCore.getInstance().getMessageService().send(sender, "editrule.updated", null);
         } else {
-            sender.sendMessage("Failed to update rule.");
+            OpenCore.getInstance().getMessageService().send(sender, "editrule.failed", null);
         }
         return true;
     }

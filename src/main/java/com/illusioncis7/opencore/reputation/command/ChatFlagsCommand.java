@@ -5,6 +5,8 @@ import com.illusioncis7.opencore.reputation.ReputationFlag;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import com.illusioncis7.opencore.OpenCore;
+import java.util.HashMap;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,22 +24,28 @@ public class ChatFlagsCommand implements TabExecutor {
         if (args.length == 0 || "list".equalsIgnoreCase(args[0])) {
             List<ReputationFlag> list = service.listFlags();
             if (list.isEmpty()) {
-                sender.sendMessage("No flags defined.");
+                OpenCore.getInstance().getMessageService().send(sender, "chatflags.none", null);
                 return true;
             }
             for (ReputationFlag f : list) {
                 String act = f.active ? "active" : "inactive";
-                sender.sendMessage(f.code + ": " + f.minChange + ".." + f.maxChange + " (" + act + ") - " + f.description);
+                java.util.Map<String,String> ph = new HashMap<>();
+                ph.put("code", f.code);
+                ph.put("min", String.valueOf(f.minChange));
+                ph.put("max", String.valueOf(f.maxChange));
+                ph.put("state", act);
+                ph.put("desc", f.description);
+                OpenCore.getInstance().getMessageService().send(sender, "chatflags.entry", ph);
             }
             return true;
         }
         if ("set".equalsIgnoreCase(args[0])) {
             if (!sender.isOp()) {
-                sender.sendMessage("Admins only.");
+                OpenCore.getInstance().getMessageService().send(sender, "reputation.admin_only", null);
                 return true;
             }
             if (args.length < 4) {
-                sender.sendMessage("Usage: /chatflags set <CODE> <min> <max>");
+                OpenCore.getInstance().getMessageService().send(sender, "chatflags.usage_set", null);
                 return true;
             }
             String code = args[1];
@@ -45,16 +53,16 @@ public class ChatFlagsCommand implements TabExecutor {
                 int min = Integer.parseInt(args[2]);
                 int max = Integer.parseInt(args[3]);
                 if (service.setRange(code, min, max)) {
-                    sender.sendMessage("Flag updated.");
+                    OpenCore.getInstance().getMessageService().send(sender, "chatflags.updated", null);
                 } else {
-                    sender.sendMessage("Update failed.");
+                    OpenCore.getInstance().getMessageService().send(sender, "chatflags.update_failed", null);
                 }
             } catch (NumberFormatException e) {
-                sender.sendMessage("Invalid numbers.");
+                OpenCore.getInstance().getMessageService().send(sender, "chatflags.invalid_numbers", null);
             }
             return true;
         }
-        sender.sendMessage("Usage: /chatflags list | set <CODE> <min> <max>");
+        OpenCore.getInstance().getMessageService().send(sender, "chatflags.usage", null);
         return true;
     }
 

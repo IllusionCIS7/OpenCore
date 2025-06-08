@@ -7,6 +7,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import java.util.HashMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,11 +22,11 @@ public class VoteCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Players only.");
+            OpenCore.getInstance().getMessageService().send(sender, "vote.players_only", null);
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage("Usage: /vote <id> <yes|no>");
+            OpenCore.getInstance().getMessageService().send(sender, "vote.usage", null);
             return true;
         }
         try {
@@ -33,12 +34,12 @@ public class VoteCommand implements TabExecutor {
             boolean yes = args[1].equalsIgnoreCase("yes") || args[1].equalsIgnoreCase("y");
             Player player = (Player) sender;
             if (votingService.hasPlayerVoted(player.getUniqueId(), id)) {
-                sender.sendMessage("Du hast bereits abgestimmt.");
+                OpenCore.getInstance().getMessageService().send(sender, "vote.already", null);
                 return true;
             }
             boolean success = votingService.castVote(player.getUniqueId(), id, yes);
             if (!success) {
-                sender.sendMessage("Unknown or closed suggestion.");
+                OpenCore.getInstance().getMessageService().send(sender, "vote.unknown", null);
                 OpenCore.getInstance().getLogger().warning("Invalid vote from " + sender.getName() + " for " + id);
                 return true;
             }
@@ -46,15 +47,17 @@ public class VoteCommand implements TabExecutor {
                 com.illusioncis7.opencore.voting.VotingService.VoteWeights w = votingService.getVoteWeights(id);
                 int remaining = Math.max(0, w.requiredWeight - w.yesWeight);
                 if (remaining > 0) {
-                    sender.sendMessage("Noch " + remaining + " Stimmen nötig.");
+                    java.util.Map<String,String> ph = new HashMap<>();
+                    ph.put("remaining", String.valueOf(remaining));
+                    OpenCore.getInstance().getMessageService().send(sender, "vote.remaining", ph);
                 } else {
-                    sender.sendMessage("Quorum erreicht – Voting endet");
+                    OpenCore.getInstance().getMessageService().send(sender, "vote.quorum", null);
                 }
             } else {
-                sender.sendMessage("Voting concluded.");
+                OpenCore.getInstance().getMessageService().send(sender, "vote.concluded", null);
             }
         } catch (NumberFormatException e) {
-            sender.sendMessage("Invalid id.");
+            OpenCore.getInstance().getMessageService().send(sender, "vote.invalid_id", null);
         }
         return true;
     }

@@ -6,10 +6,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import java.util.Collections;
 import java.time.Instant;
 import java.time.Duration;
 
@@ -24,7 +24,7 @@ public class SuggestCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Players only.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.players_only", null);
             return true;
         }
         Player player = (Player) sender;
@@ -32,31 +32,33 @@ public class SuggestCommand implements TabExecutor {
         Instant now = Instant.now();
         Instant last = lastSubmission.get(uuid);
         if (last != null && Duration.between(last, now).compareTo(Duration.ofMinutes(5)) < 0) {
-            sender.sendMessage("You can submit only one suggestion every 5 minutes.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.rate_limit", null);
             OpenCore.getInstance().getLogger().info("Rate limit hit for " + sender.getName());
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage("Usage: /suggest <text>");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.usage", null);
             return true;
         }
         String text = String.join(" ", args).trim();
         if (text.length() < 5) {
-            sender.sendMessage("Suggestion too short.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.too_short", null);
             OpenCore.getInstance().getLogger().warning("Rejected short suggestion from " + sender.getName());
             return true;
         }
         if (votingService.isSimilarSuggestionRecent(text, java.time.Duration.ofHours(24), 10)) {
-            sender.sendMessage("Ähnlicher Vorschlag existiert bereits.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.similar", null);
             return true;
         }
         lastSubmission.put(uuid, now);
         OpenCore.getInstance().getLogger().info("Suggestion from " + sender.getName() + " at " + now + ": " + text);
         int id = votingService.submitSuggestion(uuid, text);
         if (id == -1) {
-            sender.sendMessage("Failed to submit suggestion.");
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.failed", null);
         } else {
-            sender.sendMessage("Suggestion submitted with ID " + id + ".");
+            Map<String,String> ph = new HashMap<>();
+            ph.put("id", String.valueOf(id));
+            OpenCore.getInstance().getMessageService().send(sender, "suggest.success", ph);
         }
         return true;
     }
