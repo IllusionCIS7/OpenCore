@@ -21,6 +21,10 @@ public class RulesCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.rules")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
         if (args.length >= 2 && args[0].equalsIgnoreCase("id")) {
             try {
                 int id = Integer.parseInt(args[1]);

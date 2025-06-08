@@ -24,6 +24,10 @@ public class MyRepCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.myrep")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
         if (!(sender instanceof Player)) {
             OpenCore.getInstance().getMessageService().send(sender, "reputation.players_only", null);
             return true;

@@ -110,3 +110,6 @@ join:
   privacy_warning:
     - "&cBitte teile keine sensiblen Daten im \u00F6ffentlichen Chat."
     - "&7Der Chat wird im Discord angezeigt und vom Plugin ausgewertet."
+
+no_permission: "&cDazu hast du keine Berechtigung."
+module_disabled: "&cDieses Modul ist deaktiviert."

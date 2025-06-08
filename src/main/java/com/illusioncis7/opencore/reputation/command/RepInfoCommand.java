@@ -25,8 +25,8 @@ public class RepInfoCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.isOp()) {
-            OpenCore.getInstance().getMessageService().send(sender, "reputation.admin_only", null);
+        if (!sender.hasPermission("opencore.command.repinfo")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
             return true;
         }
         if (args.length < 1) {

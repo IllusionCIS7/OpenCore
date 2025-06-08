@@ -23,6 +23,14 @@ public class RollbackConfigCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.rollbackconfig")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
+        if (!OpenCore.getInstance().isConfigGrabberEnabled()) {
+            OpenCore.getInstance().getMessageService().send(sender, "module_disabled", null);
+            return true;
+        }
         if (args.length < 1) {
             OpenCore.getInstance().getMessageService().send(sender, "rollbackconfig.usage", null);
             return true;

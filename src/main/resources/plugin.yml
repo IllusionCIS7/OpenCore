@@ -6,33 +6,49 @@ softdepend: [Plan]
 commands:
   suggest:
     description: Submit a configuration suggestion
+    permission: opencore.command.suggest
   suggestions:
     description: List open suggestions
+    permission: opencore.command.suggestions
   vote:
     description: Vote on a suggestion
+    permission: opencore.command.vote
   rules:
     description: List server rules
+    permission: opencore.command.rules
   rollbackconfig:
     description: Roll back a configuration change
+    permission: opencore.command.rollbackconfig
   myrep:
     description: Show your reputation
+    permission: opencore.command.myrep
   gptlog:
     description: Show recent GPT responses
+    permission: opencore.command.gptlog
   repinfo:
     description: Show reputation info for a player
+    permission: opencore.command.repinfo
   repchange:
     description: Show details for a reputation change event
+    permission: opencore.command.repchange
   status:
     description: Show plugin status
+    permission: opencore.command.status
   configlist:
     description: List configurable parameters
+    permission: opencore.command.configlist
   votestatus:
     description: Show closed vote results
+    permission: opencore.command.votestatus
   editrule:
     description: Edit an existing rule
+    permission: opencore.command.editrule
   rulehistory:
     description: Show history for a rule
+    permission: opencore.command.rulehistory
   chatflags:
     description: Manage chat reputation flags
+    permission: opencore.command.chatflags
   reload:
     description: Reload plugin configuration
+    permission: opencore.command.reload
