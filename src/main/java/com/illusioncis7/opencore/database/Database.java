@@ -30,11 +30,14 @@ public class Database {
             String password = config.getString("password", "");
 
             String url = "jdbc:mariadb://" + host + ":" + port + "/" + database + "?useSSL=false";
+            Class.forName("org.mariadb.jdbc.Driver");
             connection = DriverManager.getConnection(url, username, password);
 
             setupTables();
         } catch (SQLException e) {
             plugin.getLogger().severe("Could not connect to the database: " + e.getMessage());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 

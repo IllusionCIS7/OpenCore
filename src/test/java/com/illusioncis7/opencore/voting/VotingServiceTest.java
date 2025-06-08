@@ -1,8 +1,11 @@
+package com.illusioncis7.opencore.voting;
+
 import com.illusioncis7.opencore.config.ConfigService;
 import com.illusioncis7.opencore.database.Database;
 import com.illusioncis7.opencore.gpt.GptService;
 import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.rules.RuleService;
+import com.illusioncis7.opencore.voting.VotingService;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
