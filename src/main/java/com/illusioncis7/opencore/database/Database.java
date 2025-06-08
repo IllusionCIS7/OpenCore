@@ -107,7 +107,7 @@ public class Database {
                     "id VARCHAR(36) PRIMARY KEY," +
                     "timestamp TIMESTAMP NOT NULL," +
                     "player_uuid VARCHAR(36) NOT NULL," +
-                    "change INT NOT NULL," +
+                    "`change` INT NOT NULL," +
                     "reason_summary VARCHAR(255)," +
                     "source_module VARCHAR(50)," +
                     "details TEXT" +
