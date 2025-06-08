@@ -147,6 +147,10 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("chatflags")).setExecutor(chatFlagsCmd);
         getCommand("chatflags").setTabCompleter(chatFlagsCmd);
 
+        com.illusioncis7.opencore.admin.ReloadCommand reloadCmd = new com.illusioncis7.opencore.admin.ReloadCommand(this);
+        Objects.requireNonNull(getCommand("reload")).setExecutor(reloadCmd);
+        getCommand("reload").setTabCompleter(reloadCmd);
+
         com.illusioncis7.opencore.admin.StatusCommand statusCmd = new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService);
         Objects.requireNonNull(getCommand("status")).setExecutor(statusCmd);
         getCommand("status").setTabCompleter(statusCmd);

@@ -34,3 +34,5 @@ commands:
     description: Show history for a rule
   chatflags:
     description: Manage chat reputation flags
+  reload:
+    description: Reload plugin configuration
