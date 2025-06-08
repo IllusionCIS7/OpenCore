@@ -37,6 +37,11 @@ public class VoteCommand implements TabExecutor {
                 OpenCore.getInstance().getMessageService().send(sender, "vote.already", null);
                 return true;
             }
+            int rep = OpenCore.getInstance().getReputationService().getReputation(player.getUniqueId());
+            if (rep < votingService.getMinVoteReputation()) {
+                OpenCore.getInstance().getMessageService().send(sender, "vote.low_rep", null);
+                return true;
+            }
             boolean success = votingService.castVote(player.getUniqueId(), id, yes);
             if (!success) {
                 OpenCore.getInstance().getMessageService().send(sender, "vote.unknown", null);
@@ -53,6 +58,7 @@ public class VoteCommand implements TabExecutor {
                 } else {
                     OpenCore.getInstance().getMessageService().send(sender, "vote.quorum", null);
                 }
+                sender.sendMessage(votingService.buildVoteBar(w.yesWeight, w.noWeight));
             } else {
                 OpenCore.getInstance().getMessageService().send(sender, "vote.concluded", null);
             }

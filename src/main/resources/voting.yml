@@ -1,1 +1,14 @@
 webhook-url: ""
+min-reputation: -5
+max-reputation: 500
+negative-weight-min: 0.0
+negative-weight-max: 1.0
+positive-weight-min: 1.0
+positive-weight-max: 20.0
+duration-minutes: 2880
+bar-length: 20
+colors:
+  yes: "&a"
+  no: "&c"
+  marker: "&e"
+  frame: "&7"

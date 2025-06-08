@@ -7,9 +7,9 @@ public class Vote {
     public final int suggestionId;
     public final UUID playerUuid;
     public final boolean voteYes;
-    public final int weight;
+    public final double weight;
 
-    public Vote(int id, int suggestionId, UUID playerUuid, boolean voteYes, int weight) {
+    public Vote(int id, int suggestionId, UUID playerUuid, boolean voteYes, double weight) {
         this.id = id;
         this.suggestionId = suggestionId;
         this.playerUuid = playerUuid;

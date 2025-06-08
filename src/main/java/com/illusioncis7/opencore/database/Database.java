@@ -154,7 +154,7 @@ public class Database {
                     "suggestion_id INT NOT NULL," +
                     "player_uuid VARCHAR(36) NOT NULL," +
                     "vote_yes BOOLEAN NOT NULL," +
-                    "weight INT NOT NULL," +
+                    "weight DOUBLE NOT NULL," +
                     "UNIQUE KEY suggestion_player (suggestion_id, player_uuid)" +
                     ")";
             stmt.executeUpdate(voteSql);

@@ -29,14 +29,25 @@ public class VotingService {
     private final GptSuggestionClassifier classifier;
     private final PlanHook planHook;
     private String webhookUrl;
-    private static final Duration VOTE_LIFETIME = Duration.ofDays(7);
+    private int minVoteRep = -5;
+    private int maxRep = 500;
+    private double negWeightMin = 0.0;
+    private double negWeightMax = 1.0;
+    private double posWeightMin = 1.0;
+    private double posWeightMax = 20.0;
+    private int barLength = 20;
+    private Duration voteLifetime = Duration.ofDays(2);
+    private String colorYes = org.bukkit.ChatColor.GREEN.toString();
+    private String colorNo = org.bukkit.ChatColor.RED.toString();
+    private String colorMarker = org.bukkit.ChatColor.YELLOW.toString();
+    private String colorFrame = org.bukkit.ChatColor.GRAY.toString();
 
     public static class VoteWeights {
-        public final int yesWeight;
-        public final int noWeight;
-        public final int requiredWeight;
+        public final double yesWeight;
+        public final double noWeight;
+        public final double requiredWeight;
 
-        public VoteWeights(int yesWeight, int noWeight, int requiredWeight) {
+        public VoteWeights(double yesWeight, double noWeight, double requiredWeight) {
             this.yesWeight = yesWeight;
             this.noWeight = noWeight;
             this.requiredWeight = requiredWeight;
@@ -68,6 +79,52 @@ public class VotingService {
         } else {
             logger.info("Discord webhook enabled");
         }
+        minVoteRep = cfg.getInt("min-reputation", -5);
+        maxRep = cfg.getInt("max-reputation", 500);
+        negWeightMin = cfg.getDouble("negative-weight-min", 0.0);
+        negWeightMax = cfg.getDouble("negative-weight-max", 1.0);
+        posWeightMin = cfg.getDouble("positive-weight-min", 1.0);
+        posWeightMax = cfg.getDouble("positive-weight-max", 20.0);
+        barLength = cfg.getInt("bar-length", 20);
+        voteLifetime = java.time.Duration.ofMinutes(cfg.getInt("duration-minutes", 2880));
+        org.bukkit.configuration.ConfigurationSection col = cfg.getConfigurationSection("colors");
+        if (col != null) {
+            colorYes = org.bukkit.ChatColor.translateAlternateColorCodes('&', col.getString("yes", "&a"));
+            colorNo = org.bukkit.ChatColor.translateAlternateColorCodes('&', col.getString("no", "&c"));
+            colorMarker = org.bukkit.ChatColor.translateAlternateColorCodes('&', col.getString("marker", "&e"));
+            colorFrame = org.bukkit.ChatColor.translateAlternateColorCodes('&', col.getString("frame", "&7"));
+        }
+    }
+
+    public double computeVoteWeight(int reputation) {
+        if (reputation < minVoteRep) {
+            return 0.0;
+        }
+        if (reputation < 0) {
+            double ratio = (double) (reputation - minVoteRep) / (0.0 - minVoteRep);
+            return negWeightMin + ratio * (negWeightMax - negWeightMin);
+        }
+        int capped = Math.min(reputation, maxRep);
+        double ratio = capped / (double) Math.max(1, maxRep);
+        return posWeightMin + ratio * (posWeightMax - posWeightMin);
+    }
+
+    public String buildVoteBar(double yes, double no) {
+        double total = yes + no;
+        double ratio = total > 0 ? yes / total : 0.5;
+        int markerPos = (int) Math.round(ratio * barLength);
+        StringBuilder sb = new StringBuilder();
+        sb.append(colorNo).append("Ablehnung ");
+        sb.append(colorFrame).append("<");
+        for (int i = 0; i < barLength; i++) {
+            if (i == markerPos) sb.append(colorMarker).append("|");
+            if (i < markerPos) sb.append(colorYes).append("I");
+            else sb.append(colorNo).append("I");
+        }
+        if (markerPos == barLength) sb.append(colorMarker).append("|");
+        sb.append(colorFrame).append(">");
+        sb.append(colorYes).append(" Zustimmung");
+        return sb.toString();
     }
 
     public int submitSuggestion(UUID player, String text) {
@@ -322,8 +379,8 @@ public class VotingService {
     public VoteWeights getVoteWeights(int suggestionId) {
         if (!database.isConnected()) return new VoteWeights(0, 0, 0);
 
-        int yesWeight = 0;
-        int noWeight = 0;
+        double yesWeight = 0.0;
+        double noWeight = 0.0;
         int highRepYes = 0;
         String voteSql = "SELECT player_uuid, vote_yes, weight FROM votes WHERE suggestion_id = ?";
         try (Connection conn = database.getConnection();
@@ -333,7 +390,7 @@ public class VotingService {
                 while (rs.next()) {
                     UUID voter = UUID.fromString(rs.getString(1));
                     boolean yes = rs.getBoolean(2);
-                    int weight = rs.getInt(3);
+                    double weight = rs.getDouble(3);
                     if (yes) {
                         yesWeight += weight;
                         if (reputationService.getReputation(voter) >= 50) {
@@ -382,12 +439,12 @@ public class VotingService {
             }
         }
 
-        int totalActiveWeight = 0;
+        double totalActiveWeight = 0.0;
         for (UUID active : planHook.getActivePlayers(Duration.ofDays(30))) {
             int rep = reputationService.getReputation(active);
-            totalActiveWeight += Math.max(1, rep / 10 + 1);
+            totalActiveWeight += computeVoteWeight(rep);
         }
-        int requiredWeight = Math.max(3, (int) Math.ceil((impact / 10.0) * totalActiveWeight));
+        double requiredWeight = Math.max(3.0, Math.ceil((impact / 10.0) * totalActiveWeight));
         return new VoteWeights(yesWeight, noWeight, requiredWeight);
     }
 
@@ -397,7 +454,10 @@ public class VotingService {
             return false;
         }
         int rep = reputationService.getReputation(player);
-        int weight = Math.max(1, rep / 10 + 1);
+        double weight = computeVoteWeight(rep);
+        if (weight <= 0.0) {
+            return false;
+        }
         String sql = "INSERT INTO votes (suggestion_id, player_uuid, vote_yes, weight) VALUES (?, ?, ?, ?) " +
                 "ON DUPLICATE KEY UPDATE vote_yes = VALUES(vote_yes), weight = VALUES(weight)";
         try (Connection conn = database.getConnection();
@@ -405,7 +465,7 @@ public class VotingService {
             ps.setInt(1, suggestionId);
             ps.setString(2, player.toString());
             ps.setBoolean(3, yes);
-            ps.setInt(4, weight);
+            ps.setDouble(4, weight);
             ps.executeUpdate();
         } catch (SQLException e) {
             logger.severe("Failed to cast vote: " + e.getMessage());
@@ -487,7 +547,7 @@ public class VotingService {
             if (!isSuggestionOpen(s.id)) {
                 continue;
             }
-            if (Duration.between(s.created, Instant.now()).compareTo(VOTE_LIFETIME) >= 0) {
+            if (Duration.between(s.created, Instant.now()).compareTo(voteLifetime) >= 0) {
                 VoteWeights w = getVoteWeights(s.id);
                 if (w.yesWeight > w.noWeight) {
                     applySuggestion(s.id);
@@ -501,8 +561,8 @@ public class VotingService {
     private void evaluateVotes(int suggestionId) {
         if (!database.isConnected()) return;
 
-        int yesWeight = 0;
-        int noWeight = 0;
+        double yesWeight = 0.0;
+        double noWeight = 0.0;
         int highRepYes = 0;
         String voteSql = "SELECT player_uuid, vote_yes, weight FROM votes WHERE suggestion_id = ?";
         try (Connection conn = database.getConnection();
@@ -512,7 +572,7 @@ public class VotingService {
                 while (rs.next()) {
                     UUID voter = UUID.fromString(rs.getString(1));
                     boolean yes = rs.getBoolean(2);
-                    int weight = rs.getInt(3);
+                    double weight = rs.getDouble(3);
                     if (yes) {
                         yesWeight += weight;
                         if (reputationService.getReputation(voter) >= 50) {
@@ -562,12 +622,12 @@ public class VotingService {
             }
         }
 
-        int totalActiveWeight = 0;
+        double totalActiveWeight = 0.0;
         for (UUID active : planHook.getActivePlayers(Duration.ofDays(30))) {
             int rep = reputationService.getReputation(active);
-            totalActiveWeight += Math.max(1, rep / 10 + 1);
+            totalActiveWeight += computeVoteWeight(rep);
         }
-        int requiredWeight = Math.max(3, (int) Math.ceil((impact / 10.0) * totalActiveWeight));
+        double requiredWeight = Math.max(3.0, Math.ceil((impact / 10.0) * totalActiveWeight));
         int requiredHighRep = impact >= 8 ? 1 : 0;
 
         if (yesWeight > noWeight && yesWeight >= requiredWeight && highRepYes >= requiredHighRep) {
@@ -673,5 +733,20 @@ public class VotingService {
         } catch (Exception e) {
             logger.warning("Failed to send webhook: " + e.getMessage());
         }
+    }
+
+    public int getMinVoteReputation() {
+        return minVoteRep;
+    }
+
+    public Duration getVoteLifetime() {
+        return voteLifetime;
+    }
+
+    public long getRemainingMinutes(Instant created) {
+        Duration age = Duration.between(created, Instant.now());
+        Duration rem = voteLifetime.minus(age);
+        if (rem.isNegative()) return 0;
+        return rem.toMinutes();
     }
 }
