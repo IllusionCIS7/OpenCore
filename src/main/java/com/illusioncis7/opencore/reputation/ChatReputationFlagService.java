@@ -28,15 +28,28 @@ public class ChatReputationFlagService {
 
     private void initTable() {
         if (!database.isConnected()) return;
-        String sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY," +
-                "code VARCHAR(50) NOT NULL," +
-                "description TEXT," +
-                "min_change INT NOT NULL," +
-                "max_change INT NOT NULL," +
-                "active BOOLEAN DEFAULT 1," +
-                "last_updated TIMESTAMP NOT NULL" +
-                ")";
+        String sql;
+        if (database.isSQLite()) {
+            sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "code TEXT NOT NULL," +
+                    "description TEXT," +
+                    "min_change INT NOT NULL," +
+                    "max_change INT NOT NULL," +
+                    "active BOOLEAN DEFAULT 1," +
+                    "last_updated TIMESTAMP NOT NULL" +
+                    ")";
+        } else {
+            sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "code VARCHAR(50) NOT NULL," +
+                    "description TEXT," +
+                    "min_change INT NOT NULL," +
+                    "max_change INT NOT NULL," +
+                    "active BOOLEAN DEFAULT 1," +
+                    "last_updated TIMESTAMP NOT NULL" +
+                    ")";
+        }
         try (Connection conn = database.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);

@@ -123,8 +123,16 @@ public class ConfigService {
             return;
         }
 
-        String sql = "INSERT INTO config_params (path, parameter_path, description, value_type, current_value) VALUES (?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE path = VALUES(path), current_value = VALUES(current_value), description = VALUES(description)";
+        String sql;
+        if (database.isSQLite()) {
+            sql = "INSERT INTO config_params (path, parameter_path, description, value_type, current_value) " +
+                    "VALUES (?, ?, ?, ?, ?) " +
+                    "ON CONFLICT(path, parameter_path) DO UPDATE SET " +
+                    "current_value=excluded.current_value, description=excluded.description";
+        } else {
+            sql = "INSERT INTO config_params (path, parameter_path, description, value_type, current_value) VALUES (?, ?, ?, ?, ?) " +
+                    "ON DUPLICATE KEY UPDATE path = VALUES(path), current_value = VALUES(current_value), description = VALUES(description)";
+        }
 
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
