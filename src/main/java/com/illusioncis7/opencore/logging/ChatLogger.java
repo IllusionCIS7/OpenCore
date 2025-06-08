@@ -23,7 +23,7 @@ public class ChatLogger implements Listener {
 
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "INSERT INTO chat_log (player_uuid, message_time, message) VALUES (?, ?, ?)";

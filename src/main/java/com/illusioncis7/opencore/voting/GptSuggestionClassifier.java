@@ -75,7 +75,7 @@ public class GptSuggestionClassifier {
     }
 
     private void updateSuggestion(int id, SuggestionType type, String reasoning, double confidence) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "UPDATE suggestions SET suggestion_type = ?, gpt_reasoning = ?, gpt_confidence = ?, classified_at = ? WHERE id = ?";
@@ -94,7 +94,7 @@ public class GptSuggestionClassifier {
 
     private void handleFailure(int id, String error) {
         logger.warning("GPT classification failed for suggestion " + id + ": " + error);
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "UPDATE suggestions SET gpt_reasoning = ?, classified_at = ? WHERE id = ?";

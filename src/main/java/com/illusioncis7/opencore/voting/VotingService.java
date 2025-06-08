@@ -89,7 +89,7 @@ public class VotingService {
     }
 
     private int insertBaseSuggestion(UUID player, String text) {
-        if (database.getConnection() == null) return -1;
+        if (!database.isConnected()) return -1;
         String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 1)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -176,7 +176,7 @@ public class VotingService {
     }
 
     private void storeRuleInfo(int suggestionId, String summary, int impact) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "UPDATE suggestions SET gpt_reasoning = ?, gpt_confidence = ? WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -198,7 +198,7 @@ public class VotingService {
     }
 
     private boolean isEditableParam(int paramId) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "SELECT editable FROM config_params WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -215,7 +215,7 @@ public class VotingService {
     }
 
     private void storeMappingError(int suggestionId, String error) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "UPDATE suggestions SET gpt_reasoning = ?, classified_at = ? WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -229,7 +229,7 @@ public class VotingService {
     }
 
     private void updateMapping(int suggestionId, int paramId, String value) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "UPDATE suggestions SET parameter_id = ?, new_value = ? WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -246,7 +246,7 @@ public class VotingService {
 
     public List<Suggestion> getOpenSuggestions() {
         List<Suggestion> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
                 "COALESCE(c.description, r.rule_text) " +
                 "FROM suggestions s " +
@@ -274,7 +274,7 @@ public class VotingService {
     }
 
     public boolean isSuggestionOpen(int suggestionId) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "SELECT open FROM suggestions WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -292,7 +292,7 @@ public class VotingService {
 
     public List<Suggestion> getClosedSuggestions() {
         List<Suggestion> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
                 "COALESCE(c.description, r.rule_text) " +
                 "FROM suggestions s " +
@@ -320,7 +320,7 @@ public class VotingService {
     }
 
     public VoteWeights getVoteWeights(int suggestionId) {
-        if (database.getConnection() == null) return new VoteWeights(0, 0, 0);
+        if (!database.isConnected()) return new VoteWeights(0, 0, 0);
 
         int yesWeight = 0;
         int noWeight = 0;
@@ -392,7 +392,7 @@ public class VotingService {
     }
 
     public boolean castVote(UUID player, int suggestionId, boolean yes) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         if (!isSuggestionOpen(suggestionId)) {
             return false;
         }
@@ -416,7 +416,7 @@ public class VotingService {
     }
 
     public boolean hasPlayerVoted(UUID player, int suggestionId) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "SELECT 1 FROM votes WHERE suggestion_id = ? AND player_uuid = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -432,7 +432,7 @@ public class VotingService {
     }
 
     public boolean isSimilarSuggestionRecent(String text, Duration timeframe, int maxDistance) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "SELECT text FROM suggestions WHERE created >= ?";
         Instant since = Instant.now().minus(timeframe);
         try (Connection conn = database.getConnection();
@@ -499,7 +499,7 @@ public class VotingService {
     }
 
     private void evaluateVotes(int suggestionId) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
 
         int yesWeight = 0;
         int noWeight = 0;
@@ -576,7 +576,7 @@ public class VotingService {
     }
 
     private void applySuggestion(int suggestionId) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "SELECT suggestion_type, parameter_id, new_value, player_uuid FROM suggestions WHERE id = ? AND open = 1";
         SuggestionType type = null;
         int paramId = 0;
@@ -636,7 +636,7 @@ public class VotingService {
     }
 
     private int getImplementedCount(UUID player) {
-        if (database.getConnection() == null) return 0;
+        if (!database.isConnected()) return 0;
         String sql = "SELECT COUNT(*) FROM suggestions WHERE player_uuid = ? AND open = 0";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -4,13 +4,16 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.File;
 import java.sql.*;
 
 public class Database {
 
     private final JavaPlugin plugin;
-    private Connection connection;
+    private HikariDataSource dataSource;
 
     public Database(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -18,9 +21,10 @@ public class Database {
 
     public void connect() {
         try {
-            if (connection != null && !connection.isClosed()) {
+            if (dataSource != null && !dataSource.isClosed()) {
                 return;
             }
+
             File configFile = new File(plugin.getDataFolder(), "database.yml");
             FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
             String host = config.getString("host", "localhost");
@@ -30,18 +34,31 @@ public class Database {
             String password = config.getString("password", "");
 
             String url = "jdbc:mariadb://" + host + ":" + port + "/" + database + "?useSSL=false";
-            Class.forName("org.mariadb.jdbc.Driver");
-            connection = DriverManager.getConnection(url, username, password);
 
-            setupTables();
+            HikariConfig hikariConfig = new HikariConfig();
+            hikariConfig.setJdbcUrl(url);
+            hikariConfig.setUsername(username);
+            hikariConfig.setPassword(password);
+            hikariConfig.setMaximumPoolSize(10);
+            hikariConfig.setConnectionTimeout(5000);
+            hikariConfig.setLeakDetectionThreshold(10000);
+
+            dataSource = new HikariDataSource(hikariConfig);
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement("SELECT 1")) {
+                long start = System.currentTimeMillis();
+                ps.execute();
+                long ping = System.currentTimeMillis() - start;
+                plugin.getLogger().info("Datenbank verbunden (Ping: " + ping + " ms)");
+                setupTables(conn);
+            }
         } catch (SQLException e) {
             plugin.getLogger().severe("Could not connect to the database: " + e.getMessage());
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
         }
     }
 
-    private void setupTables() throws SQLException {
+    private void setupTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             String chatSql = "CREATE TABLE IF NOT EXISTS chat_log (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
@@ -198,11 +215,21 @@ public class Database {
     }
 
     public Connection getConnection() {
-        return connection;
+        if (dataSource == null) return null;
+        try {
+            return dataSource.getConnection();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to obtain connection: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public boolean isConnected() {
+        return dataSource != null && !dataSource.isClosed();
     }
 
     public String getPrompt(String category) {
-        if (connection == null) return null;
+        if (!isConnected()) return null;
         String sql = "SELECT prompt FROM gpt_prompts WHERE category = ?";
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -222,9 +249,10 @@ public class Database {
      * Measure database ping time in milliseconds.
      */
     public long ping() {
-        if (connection == null) return -1;
+        if (!isConnected()) return -1;
         long start = System.currentTimeMillis();
-        try (PreparedStatement ps = connection.prepareStatement("SELECT 1")) {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT 1")) {
             ps.execute();
         } catch (SQLException e) {
             plugin.getLogger().warning("DB ping failed: " + e.getMessage());
@@ -234,12 +262,8 @@ public class Database {
     }
 
     public void disconnect() {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Error closing database connection: " + e.getMessage());
-            }
+        if (dataSource != null) {
+            dataSource.close();
         }
     }
 }

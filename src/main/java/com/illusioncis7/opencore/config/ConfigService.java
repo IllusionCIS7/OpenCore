@@ -110,7 +110,7 @@ public class ConfigService {
     }
 
     private void insertParameter(String path, String parameter) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
 
@@ -133,7 +133,7 @@ public class ConfigService {
      * Update a configuration parameter by ID with a new value.
      */
     public boolean updateParameter(int id, String newValue, UUID changedBy) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return false;
         }
 
@@ -268,7 +268,7 @@ public class ConfigService {
     }
 
     private void logChange(int paramId, Object oldVal, Object newVal, UUID player) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "INSERT INTO config_change_history (change_id, player_uuid, param_key, old_value, new_value, changed_at) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -292,7 +292,7 @@ public class ConfigService {
      * Rollback a change by applying the stored old value.
      */
     public boolean rollbackChange(UUID changeId) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "SELECT param_key, old_value FROM config_change_history WHERE change_id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -315,7 +315,7 @@ public class ConfigService {
      */
     public java.util.List<ConfigParameter> listParameters() {
         java.util.List<ConfigParameter> list = new java.util.ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT id, path, parameter_path, editable, impact_rating, value_type FROM config_params";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);

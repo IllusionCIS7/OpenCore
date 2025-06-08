@@ -27,7 +27,7 @@ public class ChatReputationFlagService {
     }
 
     private void initTable() {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
                 "code VARCHAR(50) NOT NULL," +
@@ -57,7 +57,7 @@ public class ChatReputationFlagService {
 
     private List<ReputationFlag> loadFlags(boolean activeOnly) {
         List<ReputationFlag> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT code, description, min_change, max_change, active FROM chat_reputation_flags";
         if (activeOnly) {
             sql += " WHERE active = 1";
@@ -81,7 +81,7 @@ public class ChatReputationFlagService {
 
     /** Find a flag by code. */
     public Optional<ReputationFlag> getFlagByCode(String code) {
-        if (database.getConnection() == null) return Optional.empty();
+        if (!database.isConnected()) return Optional.empty();
         String sql = "SELECT code, description, min_change, max_change, active FROM chat_reputation_flags WHERE code = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -109,7 +109,7 @@ public class ChatReputationFlagService {
 
     /** Update min/max values for a flag. */
     public boolean setRange(String code, int min, int max) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "UPDATE chat_reputation_flags SET min_change = ?, max_change = ?, last_updated = ? WHERE code = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -126,7 +126,7 @@ public class ChatReputationFlagService {
 
     /** Create a new flag. */
     public boolean createFlag(String code, String desc, int min, int max, boolean active) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "INSERT INTO chat_reputation_flags (code, description, min_change, max_change, active, last_updated) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -145,7 +145,7 @@ public class ChatReputationFlagService {
 
     /** Update full flag record. */
     public boolean updateFlag(String code, String desc, int min, int max, boolean active) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String sql = "UPDATE chat_reputation_flags SET description = ?, min_change = ?, max_change = ?, active = ?, last_updated = ? WHERE code = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

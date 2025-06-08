@@ -23,7 +23,7 @@ public class PolicyService {
     }
 
     private void initTable() {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
                 "name VARCHAR(50) NOT NULL," +
@@ -105,7 +105,7 @@ public class PolicyService {
 
     /** Retrieve the active policy text for the given module. */
     public String getPolicy(String name) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "SELECT policy_text FROM gpt_policies WHERE name = ? AND active = 1 ORDER BY version DESC LIMIT 1";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -123,7 +123,7 @@ public class PolicyService {
 
     /** Insert a new version of a policy. */
     public void setPolicy(String name, String text) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         try (Connection conn = database.getConnection()) {
             int version = 1;
             try (PreparedStatement ps = conn.prepareStatement("SELECT MAX(version) FROM gpt_policies WHERE name = ?")) {
@@ -155,7 +155,7 @@ public class PolicyService {
     /** List all policy names. */
     public List<String> listPolicies() {
         List<String> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT DISTINCT name FROM gpt_policies";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -174,7 +174,7 @@ public class PolicyService {
 
     /** Check whether a policy with the given name exists. */
     public boolean isDefined(String name) {
-        if (database.getConnection() == null) return defaults.containsKey(name);
+        if (!database.isConnected()) return defaults.containsKey(name);
         String sql = "SELECT COUNT(*) FROM gpt_policies WHERE name = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

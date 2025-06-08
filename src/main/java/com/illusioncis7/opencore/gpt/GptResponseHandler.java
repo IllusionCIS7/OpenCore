@@ -49,7 +49,7 @@ public class GptResponseHandler implements Listener {
     }
 
     private void storeResponse(UUID uuid, String module, String response) {
-        if (database.getConnection() == null) {
+        if (!database.isConnected()) {
             return;
         }
         String sql = "INSERT INTO gpt_responses (player_uuid, module, response, created, delivered) VALUES (?, ?, ?, ?, 0)";
@@ -76,7 +76,7 @@ public class GptResponseHandler implements Listener {
     }
 
     private void deliverPending(UUID uuid, Player player) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "SELECT id, module, response FROM gpt_responses WHERE player_uuid = ? AND delivered = 0";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -100,7 +100,7 @@ public class GptResponseHandler implements Listener {
     }
 
     private void markDelivered(int id) {
-        if (database.getConnection() == null) return;
+        if (!database.isConnected()) return;
         String sql = "UPDATE gpt_responses SET delivered = 1 WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -116,7 +116,7 @@ public class GptResponseHandler implements Listener {
      */
     public java.util.List<GptResponseRecord> getRecentResponses(java.util.UUID uuid, int limit) {
         java.util.List<GptResponseRecord> list = new java.util.ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT module, response, created FROM gpt_responses WHERE player_uuid = ? ORDER BY created DESC LIMIT ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

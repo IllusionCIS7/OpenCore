@@ -29,7 +29,7 @@ public class RuleService {
      * Return the number of stored rules.
      */
     public int getRuleCount() {
-        if (database.getConnection() == null) return 0;
+        if (!database.isConnected()) return 0;
         String sql = "SELECT COUNT(*) FROM server_rules";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -49,7 +49,7 @@ public class RuleService {
      * @return the created Rule or null on failure
      */
     public Rule addRule(String text, String category) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "INSERT INTO server_rules (rule_text, category) VALUES (?, ?)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -70,7 +70,7 @@ public class RuleService {
 
     public List<Rule> getRules() {
         List<Rule> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT id, rule_text, category FROM server_rules ORDER BY id";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -85,7 +85,7 @@ public class RuleService {
     }
 
     public Rule getRule(int id) {
-        if (database.getConnection() == null) return null;
+        if (!database.isConnected()) return null;
         String sql = "SELECT id, rule_text, category FROM server_rules WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -106,7 +106,7 @@ public class RuleService {
      */
     public List<RuleChange> getHistory(int ruleId) {
         List<RuleChange> list = new ArrayList<>();
-        if (database.getConnection() == null) return list;
+        if (!database.isConnected()) return list;
         String sql = "SELECT id, old_text, new_text, changed_at, changed_by, suggestion_id " +
                 "FROM rule_changes WHERE rule_id = ? ORDER BY changed_at";
         try (Connection conn = database.getConnection();
@@ -132,7 +132,7 @@ public class RuleService {
     }
 
     public boolean updateRule(int id, String newText, UUID changedBy, Integer suggestionId) {
-        if (database.getConnection() == null) return false;
+        if (!database.isConnected()) return false;
         String selectSql = "SELECT rule_text FROM server_rules WHERE id = ?";
         String updateSql = "UPDATE server_rules SET rule_text = ? WHERE id = ?";
         String logSql = "INSERT INTO rule_changes (rule_id, old_text, new_text, changed_at, changed_by, suggestion_id) " +
