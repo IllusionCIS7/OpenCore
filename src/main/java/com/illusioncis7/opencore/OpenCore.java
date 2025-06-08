@@ -47,6 +47,10 @@ public class OpenCore extends JavaPlugin {
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
 
+    private boolean moduleConfigGrabber = true;
+    private boolean moduleSuggestions = true;
+    private boolean moduleChatAnalyzer = true;
+
     public static OpenCore getInstance() {
         return instance;
     }
@@ -63,6 +67,17 @@ public class OpenCore extends JavaPlugin {
         saveResource("api.yml", false);
         saveResource("messages.yml", false);
         saveResource("webpanel/index.html", false);
+        saveResource("modules.yml", false);
+
+        org.bukkit.configuration.file.FileConfiguration modCfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.File(getDataFolder(), "modules.yml"));
+        org.bukkit.configuration.ConfigurationSection mods = modCfg.getConfigurationSection("modules");
+        if (mods != null) {
+            moduleConfigGrabber = mods.getBoolean("config-grabber", true);
+            moduleSuggestions = mods.getBoolean("suggestions", true);
+            moduleChatAnalyzer = mods.getBoolean("chat-analyzer", true);
+        }
 
         database = new Database(this);
         database.connect();
@@ -73,7 +88,11 @@ public class OpenCore extends JavaPlugin {
         chatFlagService = new ChatReputationFlagService(this, database);
 
         configService = new ConfigService(this, database);
-        configService.scanAndStore(new File(".").getAbsoluteFile());
+        if (moduleConfigGrabber) {
+            configService.scanAndStore(new File(".").getAbsoluteFile());
+        } else {
+            getLogger().info("ConfigGrabber disabled via modules.yml");
+        }
 
         ruleService = new RuleService(this, database);
 
@@ -99,17 +118,21 @@ public class OpenCore extends JavaPlugin {
 
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
 
-        SuggestCommand suggestCmd = new SuggestCommand(votingService);
-        Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
-        getCommand("suggest").setTabCompleter(suggestCmd);
+        if (moduleSuggestions) {
+            SuggestCommand suggestCmd = new SuggestCommand(votingService);
+            Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
+            getCommand("suggest").setTabCompleter(suggestCmd);
 
-        SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
-        Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
-        getCommand("suggestions").setTabCompleter(listCmd);
+            SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
+            Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
+            getCommand("suggestions").setTabCompleter(listCmd);
 
-        VoteCommand voteCmd = new VoteCommand(votingService);
-        Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
-        getCommand("vote").setTabCompleter(voteCmd);
+            VoteCommand voteCmd = new VoteCommand(votingService);
+            Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
+            getCommand("vote").setTabCompleter(voteCmd);
+        } else {
+            getLogger().info("Suggestions module disabled via modules.yml");
+        }
 
         RulesCommand rulesCmd = new RulesCommand(ruleService);
         Objects.requireNonNull(getCommand("rules")).setExecutor(rulesCmd);
@@ -159,19 +182,27 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("configlist")).setExecutor(cfgListCmd);
         getCommand("configlist").setTabCompleter(cfgListCmd);
 
-        com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
-        Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
-        getCommand("votestatus").setTabCompleter(voteStatusCmd);
+        if (moduleSuggestions) {
+            com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
+            Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
+            getCommand("votestatus").setTabCompleter(voteStatusCmd);
+        }
 
-        new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger())
-                .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+        if (moduleChatAnalyzer) {
+            new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger())
+                    .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+        } else {
+            getLogger().info("ChatAnalyzer disabled via modules.yml");
+        }
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                votingService.checkOpenSuggestions();
-            }
-        }.runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+        if (moduleSuggestions) {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    votingService.checkOpenSuggestions();
+                }
+            }.runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+        }
 
         getServer().getPluginManager().registerEvents(new ChatLogger(database, getLogger()), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(reputationService, getLogger(), planHook, messageService), this);

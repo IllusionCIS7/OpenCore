@@ -1,0 +1,4 @@
+modules:
+  config-grabber: true
+  suggestions: true
+  chat-analyzer: true

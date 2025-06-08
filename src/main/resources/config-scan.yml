@@ -1,4 +1,5 @@
 # Configuration for ConfigService
+enabled: true
 # Paths are relative to the server root directory
 excluded:
   - server.properties

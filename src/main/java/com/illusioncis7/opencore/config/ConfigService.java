@@ -30,6 +30,7 @@ public class ConfigService {
     private final JavaPlugin plugin;
     private final Database database;
     private final Set<String> excluded = new HashSet<>();
+    private boolean enabled = true;
     private Path serverRoot;
 
     public ConfigService(JavaPlugin plugin, Database database) {
@@ -38,6 +39,7 @@ public class ConfigService {
 
         File cfgFile = new File(plugin.getDataFolder(), "config-scan.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(cfgFile);
+        this.enabled = config.getBoolean("enabled", true);
         this.excluded.addAll(config.getStringList("excluded"));
     }
 
@@ -46,6 +48,10 @@ public class ConfigService {
      * the contained parameter paths in the database.
      */
     public void scanAndStore(File root) {
+        if (!enabled) {
+            plugin.getLogger().info("Config scan disabled via configuration.");
+            return;
+        }
         if (root == null || !root.exists()) {
             return;
         }
