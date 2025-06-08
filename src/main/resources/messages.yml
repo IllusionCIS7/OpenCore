@@ -75,6 +75,7 @@ vote:
   players_only: "&cNur f\u00FCr Spieler."
   usage: "&cVerwendung: /vote <id> <yes|no>"
   already: "&cDu hast bereits abgestimmt."
+  low_rep: "&cDeine Reputation ist zu niedrig zum Abstimmen."
   unknown: "&cUnbekannter oder geschlossener Vorschlag."
   remaining: "&eNoch {remaining} Stimmen n\u00F6tig."
   quorum: "&aQuorum erreicht \u2013 Voting endet"
