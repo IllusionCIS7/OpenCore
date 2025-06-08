@@ -17,6 +17,7 @@ import java.util.Map;
 public class MessageService {
     private final JavaPlugin plugin;
     private FileConfiguration config;
+    private String prefix = "";
 
     public MessageService(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -29,6 +30,8 @@ public class MessageService {
             plugin.saveResource("messages.yml", false);
         }
         config = YamlConfiguration.loadConfiguration(file);
+        prefix = ChatColor.translateAlternateColorCodes('&',
+                config.getString("prefix", ""));
     }
 
     private List<String> loadRaw(String key) {
@@ -61,7 +64,7 @@ public class MessageService {
 
     public void send(CommandSender sender, String key, Map<String, String> placeholders) {
         for (String line : getMessage(key, placeholders)) {
-            sender.sendMessage(line);
+            sender.sendMessage(prefix + line);
         }
     }
 }
