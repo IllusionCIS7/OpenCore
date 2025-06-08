@@ -463,4 +463,47 @@ public class Database {
             dataSource.close();
         }
     }
+
+    /**
+     * Execute SQL statements from a file. Statements must be separated by
+     * semicolons. Lines starting with '--' or '#' are ignored.
+     *
+     * @param file SQL file located inside the plugin folder
+     * @return true if execution succeeded
+     */
+    public boolean executeSqlFile(java.io.File file) {
+        if (!isConnected()) return false;
+        if (file == null || !file.exists()) {
+            plugin.getLogger().warning("SQL file not found: " + file);
+            return false;
+        }
+        try (Connection conn = getConnection();
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(file));
+             Statement stmt = conn.createStatement()) {
+            conn.setAutoCommit(false);
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("--") || line.startsWith("#")) {
+                    continue;
+                }
+                sb.append(line).append(' ');
+                if (line.endsWith(";")) {
+                    String sql = sb.toString().trim();
+                    sql = sql.substring(0, sql.lastIndexOf(';')).trim();
+                    if (!sql.isEmpty()) {
+                        stmt.execute(sql);
+                    }
+                    sb.setLength(0);
+                }
+            }
+            conn.commit();
+            conn.setAutoCommit(true);
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to execute SQL file: " + e.getMessage());
+            return false;
+        }
+    }
 }

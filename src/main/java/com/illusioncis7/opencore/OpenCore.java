@@ -177,6 +177,10 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("status")).setExecutor(statusCmd);
         getCommand("status").setTabCompleter(statusCmd);
 
+        com.illusioncis7.opencore.admin.ImportSqlCommand importSqlCmd = new com.illusioncis7.opencore.admin.ImportSqlCommand(database);
+        Objects.requireNonNull(getCommand("importsql")).setExecutor(importSqlCmd);
+        getCommand("importsql").setTabCompleter(importSqlCmd);
+
         com.illusioncis7.opencore.config.command.ConfigListCommand cfgListCmd = new com.illusioncis7.opencore.config.command.ConfigListCommand(configService);
         Objects.requireNonNull(getCommand("configlist")).setExecutor(cfgListCmd);
         getCommand("configlist").setTabCompleter(cfgListCmd);
