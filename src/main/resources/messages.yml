@@ -101,6 +101,10 @@ gptlog:
 reload:
   success: "&aKonfiguration neu geladen."
   failed: "&cReload fehlgeschlagen."
+importsql:
+  usage: "&cVerwendung: /importsql <file.sql>"
+  success: "&aSQL-Datei importiert."
+  failed: "&cImport fehlgeschlagen."
 
 response:
   module: "&e[{module}] {text}"

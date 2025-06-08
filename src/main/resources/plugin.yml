@@ -52,3 +52,6 @@ commands:
   reload:
     description: Reload plugin configuration
     permission: opencore.command.reload
+  importsql:
+    description: Import an SQL dump into the database
+    permission: opencore.command.importsql
