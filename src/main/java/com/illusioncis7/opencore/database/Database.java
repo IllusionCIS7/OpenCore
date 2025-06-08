@@ -91,6 +91,7 @@ public class Database {
                     "impact_rating INT DEFAULT 5," +
                     "description TEXT," +
                     "value_type VARCHAR(20) DEFAULT 'STRING'," +
+                    "current_value TEXT," +
                     "UNIQUE KEY path_param (path, parameter_path)" +
                     ")";
             stmt.executeUpdate(cfgSql);
