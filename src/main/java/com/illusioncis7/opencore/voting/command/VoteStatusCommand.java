@@ -21,6 +21,14 @@ public class VoteStatusCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.votestatus")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
+        if (!OpenCore.getInstance().isSuggestionsEnabled()) {
+            OpenCore.getInstance().getMessageService().send(sender, "module_disabled", null);
+            return true;
+        }
         List<Suggestion> list = votingService.getClosedSuggestions();
         if (list.isEmpty()) {
             OpenCore.getInstance().getMessageService().send(sender, "votestatus.none", null);

@@ -23,6 +23,10 @@ public class EditRuleCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.editrule")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
         if (args.length < 2) {
             OpenCore.getInstance().getMessageService().send(sender, "editrule.usage", null);
             return true;

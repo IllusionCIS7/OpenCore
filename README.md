@@ -35,3 +35,25 @@ OpenCore nutzt einen HikariCP-Pool mit zehn Verbindungen. Beim Start wird ein Pi
 
 ## 🧠 Ziel
 Ein Server, der durch Spieler gesteuert, durch GPT unterstützt und durch klare Regeln geschützt wird.
+
+## 🛡 Berechtigungen
+Jeder Befehl besitzt eine eigene Permission:
+
+| Command | Permission |
+|---------|------------|
+| /suggest | `opencore.command.suggest` |
+| /suggestions | `opencore.command.suggestions` |
+| /vote | `opencore.command.vote` |
+| /rules | `opencore.command.rules` |
+| /rollbackconfig | `opencore.command.rollbackconfig` |
+| /myrep | `opencore.command.myrep` |
+| /gptlog | `opencore.command.gptlog` |
+| /repinfo | `opencore.command.repinfo` |
+| /repchange | `opencore.command.repchange` |
+| /status | `opencore.command.status` |
+| /configlist | `opencore.command.configlist` |
+| /votestatus | `opencore.command.votestatus` |
+| /editrule | `opencore.command.editrule` |
+| /rulehistory | `opencore.command.rulehistory` |
+| /chatflags | `opencore.command.chatflags` |
+| /reload | `opencore.command.reload` |

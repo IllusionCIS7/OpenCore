@@ -23,6 +23,10 @@ public class RuleHistoryCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.rulehistory")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
         if (args.length < 1) {
             OpenCore.getInstance().getMessageService().send(sender, "rulehistory.usage", null);
             return true;

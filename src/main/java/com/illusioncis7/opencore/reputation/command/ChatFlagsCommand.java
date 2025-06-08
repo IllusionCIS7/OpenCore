@@ -21,6 +21,10 @@ public class ChatFlagsCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!sender.hasPermission("opencore.command.chatflags")) {
+            OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
+            return true;
+        }
         if (args.length == 0 || "list".equalsIgnoreCase(args[0])) {
             List<ReputationFlag> list = service.listFlags();
             if (list.isEmpty()) {
@@ -40,10 +44,6 @@ public class ChatFlagsCommand implements TabExecutor {
             return true;
         }
         if ("set".equalsIgnoreCase(args[0])) {
-            if (!sender.isOp()) {
-                OpenCore.getInstance().getMessageService().send(sender, "reputation.admin_only", null);
-                return true;
-            }
             if (args.length < 4) {
                 OpenCore.getInstance().getMessageService().send(sender, "chatflags.usage_set", null);
                 return true;

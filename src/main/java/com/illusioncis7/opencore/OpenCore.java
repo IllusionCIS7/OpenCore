@@ -118,19 +118,18 @@ public class OpenCore extends JavaPlugin {
 
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
 
-        if (moduleSuggestions) {
-            SuggestCommand suggestCmd = new SuggestCommand(votingService);
-            Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
-            getCommand("suggest").setTabCompleter(suggestCmd);
+        SuggestCommand suggestCmd = new SuggestCommand(votingService);
+        Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
+        getCommand("suggest").setTabCompleter(suggestCmd);
 
-            SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
-            Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
-            getCommand("suggestions").setTabCompleter(listCmd);
+        SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
+        Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
+        getCommand("suggestions").setTabCompleter(listCmd);
 
-            VoteCommand voteCmd = new VoteCommand(votingService);
-            Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
-            getCommand("vote").setTabCompleter(voteCmd);
-        } else {
+        VoteCommand voteCmd = new VoteCommand(votingService);
+        Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
+        getCommand("vote").setTabCompleter(voteCmd);
+        if (!moduleSuggestions) {
             getLogger().info("Suggestions module disabled via modules.yml");
         }
 
@@ -182,11 +181,9 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("configlist")).setExecutor(cfgListCmd);
         getCommand("configlist").setTabCompleter(cfgListCmd);
 
-        if (moduleSuggestions) {
-            com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
-            Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
-            getCommand("votestatus").setTabCompleter(voteStatusCmd);
-        }
+        com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
+        Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
+        getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
         if (moduleChatAnalyzer) {
             new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger())
@@ -271,5 +268,17 @@ public class OpenCore extends JavaPlugin {
 
     public com.illusioncis7.opencore.setup.SetupManager getSetupManager() {
         return setupManager;
+    }
+
+    public boolean isConfigGrabberEnabled() {
+        return moduleConfigGrabber;
+    }
+
+    public boolean isSuggestionsEnabled() {
+        return moduleSuggestions;
+    }
+
+    public boolean isChatAnalyzerEnabled() {
+        return moduleChatAnalyzer;
     }
 }
