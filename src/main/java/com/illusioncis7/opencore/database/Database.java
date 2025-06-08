@@ -41,7 +41,7 @@ public class Database {
             if (engine == Engine.SQLITE) {
                 String file = config.getString("file", "opencore.db");
                 File dbFile = new File(plugin.getDataFolder(), file);
-                hikariConfig.setDriverClassName("shaded.org.sqlite.JDBC");
+                hikariConfig.setDriverClassName("org.sqlite.JDBC");
                 hikariConfig.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
                 hikariConfig.setMaximumPoolSize(1);
             } else {
