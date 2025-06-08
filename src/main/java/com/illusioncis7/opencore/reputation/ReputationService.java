@@ -157,7 +157,7 @@ public class ReputationService {
      */
     public synchronized ReputationEvent getEvent(UUID eventId) {
         if (!database.isConnected()) return null;
-        String sql = "SELECT timestamp, player_uuid, change, reason_summary, source_module, details FROM reputation_events WHERE id = ?";
+        String sql = "SELECT timestamp, player_uuid, `change`, reason_summary, source_module, details FROM reputation_events WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, eventId.toString());
@@ -198,7 +198,7 @@ public class ReputationService {
     }
 
     private void insertEvent(Connection conn, UUID playerUuid, int delta, String reason, String source, String detailsJson) throws SQLException {
-        String eventSql = "INSERT INTO reputation_events (id, timestamp, player_uuid, change, reason_summary, source_module, details) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String eventSql = "INSERT INTO reputation_events (id, timestamp, player_uuid, `change`, reason_summary, source_module, details) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(eventSql)) {
             UUID eventId = UUID.randomUUID();
             ps.setString(1, eventId.toString());
@@ -236,7 +236,7 @@ public class ReputationService {
         if (!database.isConnected()) {
             return list;
         }
-        String sql = "SELECT id, timestamp, change, reason_summary, source_module, details FROM reputation_events WHERE player_uuid = ? ORDER BY timestamp";
+        String sql = "SELECT id, timestamp, `change`, reason_summary, source_module, details FROM reputation_events WHERE player_uuid = ? ORDER BY timestamp";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, playerUuid.toString());
