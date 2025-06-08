@@ -7,6 +7,7 @@ import com.illusioncis7.opencore.reputation.ReputationService;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.voting.SuggestionType;
 import com.illusioncis7.opencore.plan.PlanHook;
+import com.illusioncis7.opencore.OpenCore;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.json.JSONObject;
 
@@ -41,6 +42,7 @@ public class VotingService {
     private String colorNo = org.bukkit.ChatColor.RED.toString();
     private String colorMarker = org.bukkit.ChatColor.YELLOW.toString();
     private String colorFrame = org.bukkit.ChatColor.GRAY.toString();
+    private String voteBroadcast;
 
     public static class VoteWeights {
         public final double yesWeight;
@@ -87,6 +89,7 @@ public class VotingService {
         posWeightMax = cfg.getDouble("positive-weight-max", 20.0);
         barLength = cfg.getInt("bar-length", 20);
         voteLifetime = java.time.Duration.ofMinutes(cfg.getInt("duration-minutes", 2880));
+        voteBroadcast = cfg.getString("broadcast-message", "vote.start");
         org.bukkit.configuration.ConfigurationSection col = cfg.getConfigurationSection("colors");
         if (col != null) {
             colorYes = org.bukkit.ChatColor.translateAlternateColorCodes('&', col.getString("yes", "&a"));
@@ -141,13 +144,19 @@ public class VotingService {
         classifier.classify(id, text,
                 () -> mapConfigChange(id, player, text),
                 () -> mapRuleChange(id, player, text),
-                type -> postWebhook(id, type, text));
+                type -> {
+                    postWebhook(id, type, text);
+                    if (type != SuggestionType.CONFIG_CHANGE && type != SuggestionType.RULE_CHANGE) {
+                        markOpen(id);
+                        broadcastStart(id);
+                    }
+                });
         return id;
     }
 
     private int insertBaseSuggestion(UUID player, String text) {
         if (!database.isConnected()) return -1;
-        String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 1)";
+        String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 0)";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, player.toString());
@@ -195,6 +204,8 @@ public class VotingService {
                     return;
                 }
                 updateMapping(suggestionId, paramId, value);
+                markOpen(suggestionId);
+                broadcastStart(suggestionId);
             } catch (Exception e) {
                 logger.warning("Invalid GPT mapping response: " + e.getMessage());
                 storeMappingError(suggestionId, "Parse error: " + e.getMessage());
@@ -225,6 +236,8 @@ public class VotingService {
                 int impact = obj.optInt("impact", 5);
                 updateMapping(suggestionId, ruleId, newText);
                 storeRuleInfo(suggestionId, summary, impact);
+                markOpen(suggestionId);
+                broadcastStart(suggestionId);
             } catch (Exception e) {
                 logger.warning("Invalid GPT rule mapping response: " + e.getMessage());
                 storeMappingError(suggestionId, "Parse error: " + e.getMessage());
@@ -693,6 +706,64 @@ public class VotingService {
         } catch (SQLException e) {
             logger.warning("Failed to close suggestion: " + e.getMessage());
         }
+    }
+
+    private void markOpen(int suggestionId) {
+        String sql = "UPDATE suggestions SET open = 1 WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, suggestionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warning("Failed to open suggestion: " + e.getMessage());
+        }
+    }
+
+    private void broadcastStart(int suggestionId) {
+        if (voteBroadcast == null || voteBroadcast.isEmpty()) {
+            return;
+        }
+        Suggestion s = getSuggestion(suggestionId);
+        if (s == null) return;
+        String title = s.newValue != null && !s.newValue.isEmpty()
+                ? s.newValue
+                : (s.description != null && !s.description.isEmpty() ? s.description : s.text);
+        java.util.Map<String, String> ph = new java.util.HashMap<>();
+        ph.put("id", String.valueOf(s.id));
+        ph.put("title", title);
+        for (String line : com.illusioncis7.opencore.OpenCore.getInstance().getMessageService().getMessage(voteBroadcast, ph)) {
+            plugin.getServer().broadcastMessage(line);
+        }
+    }
+
+    private Suggestion getSuggestion(int id) {
+        if (!database.isConnected()) return null;
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+                "COALESCE(c.description, r.rule_text) " +
+                "FROM suggestions s " +
+                "LEFT JOIN config_params c ON s.parameter_id = c.id " +
+                "LEFT JOIN server_rules r ON s.parameter_id = r.id " +
+                "WHERE s.id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int sid = rs.getInt(1);
+                    java.util.UUID player = java.util.UUID.fromString(rs.getString(2));
+                    int paramId = rs.getInt(3);
+                    String val = rs.getString(4);
+                    String t = rs.getString(5);
+                    java.time.Instant created = rs.getTimestamp(6).toInstant();
+                    boolean open = rs.getBoolean(7);
+                    String desc = rs.getString(8);
+                    return new Suggestion(sid, player, paramId, val, desc, t, created, open);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Failed to load suggestion: " + e.getMessage());
+        }
+        return null;
     }
 
     private int getImplementedCount(UUID player) {

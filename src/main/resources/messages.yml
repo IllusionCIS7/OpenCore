@@ -77,6 +77,7 @@ vote:
   already: "&cDu hast bereits abgestimmt."
   low_rep: "&cDeine Reputation ist zu niedrig zum Abstimmen."
   unknown: "&cUnbekannter oder geschlossener Vorschlag."
+  start: "&aNeues Voting &e#{id}&a: {title}"
   remaining: "&eNoch {remaining} Stimmen n\u00F6tig."
   quorum: "&aQuorum erreicht \u2013 Voting endet"
   concluded: "&aVoting abgeschlossen."

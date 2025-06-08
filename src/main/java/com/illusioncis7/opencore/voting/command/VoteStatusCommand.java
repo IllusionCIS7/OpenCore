@@ -29,7 +29,9 @@ public class VoteStatusCommand implements TabExecutor {
         for (Suggestion s : list) {
             VoteWeights w = votingService.getVoteWeights(s.id);
             boolean accepted = w.yesWeight > w.noWeight && w.yesWeight >= w.requiredWeight;
-            String title = (s.description != null && !s.description.isEmpty()) ? s.description : s.text;
+            String title = s.newValue != null && !s.newValue.isEmpty()
+                    ? s.newValue
+                    : (s.description != null && !s.description.isEmpty() ? s.description : s.text);
             String result = accepted ? "angenommen" : "abgelehnt";
             String change = s.newValue != null ? s.newValue : "";
             java.util.Map<String,String> ph = new HashMap<>();
