@@ -28,6 +28,7 @@ import java.util.Objects;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 public class OpenCore extends JavaPlugin {
 
@@ -46,6 +47,8 @@ public class OpenCore extends JavaPlugin {
     private MessageService messageService;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
+    private com.illusioncis7.opencore.reputation.ChatAnalyzerTask chatAnalyzerTask;
+    private org.bukkit.scheduler.BukkitTask chatAnalyzerTimer;
 
     private boolean moduleConfigGrabber = true;
     private boolean moduleSuggestions = true;
@@ -169,6 +172,10 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("chatflags")).setExecutor(chatFlagsCmd);
         getCommand("chatflags").setTabCompleter(chatFlagsCmd);
 
+        com.illusioncis7.opencore.reputation.command.ChatAnalyzeCommand chatAnalyzeCmd = new com.illusioncis7.opencore.reputation.command.ChatAnalyzeCommand(this);
+        Objects.requireNonNull(getCommand("chatanalyze")).setExecutor(chatAnalyzeCmd);
+        getCommand("chatanalyze").setTabCompleter(chatAnalyzeCmd);
+
         com.illusioncis7.opencore.admin.ReloadCommand reloadCmd = new com.illusioncis7.opencore.admin.ReloadCommand(this);
         Objects.requireNonNull(getCommand("reload")).setExecutor(reloadCmd);
         getCommand("reload").setTabCompleter(reloadCmd);
@@ -190,8 +197,7 @@ public class OpenCore extends JavaPlugin {
         getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
         if (moduleChatAnalyzer) {
-            new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger())
-                    .runTaskTimerAsynchronously(this, 0L, 30 * 60 * 20L);
+            startChatAnalyzer();
         } else {
             getLogger().info("ChatAnalyzer disabled via modules.yml");
         }
@@ -268,6 +274,43 @@ public class OpenCore extends JavaPlugin {
 
     public MessageService getMessageService() {
         return messageService;
+    }
+
+    /** Start the periodic chat analyzer using the configured interval. */
+    private void startChatAnalyzer() {
+        int ticks = reputationService.getAnalysisIntervalMinutes() * 60 * 20;
+        chatAnalyzerTask = new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(database, gptService, reputationService, chatFlagService, ruleService, getLogger());
+        chatAnalyzerTimer = chatAnalyzerTask.runTaskTimerAsynchronously(this, 0L, ticks);
+    }
+
+    /** Restart the analyzer timer after manual execution or config reload. */
+    private void restartChatAnalyzer() {
+        if (chatAnalyzerTimer != null) {
+            chatAnalyzerTimer.cancel();
+        }
+        int ticks = reputationService.getAnalysisIntervalMinutes() * 60 * 20;
+        chatAnalyzerTimer = chatAnalyzerTask.runTaskTimerAsynchronously(this, ticks, ticks);
+    }
+
+    /** Trigger an immediate chat analysis and reset the interval. */
+    public void runChatAnalysisNow() {
+        if (!moduleChatAnalyzer || chatAnalyzerTask == null) {
+            return;
+        }
+        getServer().getScheduler().runTaskAsynchronously(this, chatAnalyzerTask);
+        restartChatAnalyzer();
+    }
+
+    /** Apply configuration changes to the analyzer schedule. */
+    public void reloadChatAnalyzer() {
+        if (!moduleChatAnalyzer) {
+            return;
+        }
+        if (chatAnalyzerTask == null) {
+            startChatAnalyzer();
+        } else {
+            restartChatAnalyzer();
+        }
     }
 
     public com.illusioncis7.opencore.setup.SetupManager getSetupManager() {
