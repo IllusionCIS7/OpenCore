@@ -2,6 +2,7 @@ reputation:
   min-score: -500
   max-score: 500
   maxReputationPerAnalysis: 10
+  analysis-interval-minutes: 30
   changes:
     helpful-answer:
       min: 2

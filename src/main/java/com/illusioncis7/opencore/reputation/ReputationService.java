@@ -23,6 +23,7 @@ public class ReputationService {
     private int minScore = -500;
     private int maxScore = 500;
     private int maxGainPerAnalysis = 10;
+    private int analysisIntervalMinutes = 30;
 
     private static class Range {
         final int min;
@@ -58,6 +59,7 @@ public class ReputationService {
             minScore = rep.getInt("min-score", -500);
             maxScore = rep.getInt("max-score", 500);
             maxGainPerAnalysis = rep.getInt("maxReputationPerAnalysis", 10);
+            analysisIntervalMinutes = rep.getInt("analysis-interval-minutes", 30);
             ConfigurationSection changes = rep.getConfigurationSection("changes");
             if (changes != null) {
                 for (String key : changes.getKeys(false)) {
@@ -88,6 +90,10 @@ public class ReputationService {
 
     public int getMaxGainPerAnalysis() {
         return maxGainPerAnalysis;
+    }
+
+    public int getAnalysisIntervalMinutes() {
+        return analysisIntervalMinutes;
     }
 
     public boolean hasRange(String key) {
