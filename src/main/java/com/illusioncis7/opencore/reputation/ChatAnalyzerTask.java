@@ -82,10 +82,11 @@ public class ChatAnalyzerTask extends BukkitRunnable {
                         continue;
                     }
                     if (change < def.minChange || change > def.maxChange) {
-                        change = def.maxChange;
-                        logger.warning("Change out of bounds for flag " + flag + ": " + change + " | Set it to " + def.maxChange);
-                        continue;
+                        int clamped = Math.min(def.maxChange, Math.max(def.minChange, change));
+                        logger.warning("Change out of bounds for flag " + flag + ": " + change + " | Clamped to " + clamped);
+                        change = clamped;
                     }
+                    item.put("change", change);
                     UUID playerUuid = resolveAlias(alias);
                     if (playerUuid == null) continue;
                     perPlayer.computeIfAbsent(playerUuid, k -> new java.util.ArrayList<>()).add(item);
