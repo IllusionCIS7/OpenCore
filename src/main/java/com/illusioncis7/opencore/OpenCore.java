@@ -289,7 +289,9 @@ public class OpenCore extends JavaPlugin {
         if (!moduleChatAnalyzer || chatAnalyzerTask == null) {
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, chatAnalyzerTask);
+        // schedule the existing BukkitRunnable using a simple Runnable wrapper
+        // to avoid IllegalStateException from rescheduling the same instance
+        getServer().getScheduler().runTaskAsynchronously(this, chatAnalyzerTask::run);
         restartChatAnalyzer();
     }
 
