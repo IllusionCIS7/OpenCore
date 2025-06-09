@@ -110,7 +110,12 @@ public class ReputationService {
         delta = Math.max(-100, Math.min(100, delta));
         try (Connection conn = database.getConnection()) {
             ensurePlayer(conn, playerUuid);
-            String updateSql = "UPDATE player_registry SET reputation_score = GREATEST(?, LEAST(?, reputation_score + ?)) WHERE uuid = ?";
+            String updateSql;
+            if (database.isSQLite()) {
+                updateSql = "UPDATE player_registry SET reputation_score = MAX(?, MIN(?, reputation_score + ?)) WHERE uuid = ?";
+            } else {
+                updateSql = "UPDATE player_registry SET reputation_score = GREATEST(?, LEAST(?, reputation_score + ?)) WHERE uuid = ?";
+            }
             try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                 ps.setInt(1, minScore);
                 ps.setInt(2, maxScore);
