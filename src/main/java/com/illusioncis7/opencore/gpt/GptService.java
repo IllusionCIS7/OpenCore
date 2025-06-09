@@ -46,6 +46,8 @@ public class GptService {
     private int intervalSeconds;
     private boolean enabled;
     private boolean processing;
+    private String model;
+    private double temperature;
 
     public GptService(JavaPlugin plugin, Database database, PolicyService policyService) {
         this.plugin = plugin;
@@ -59,6 +61,8 @@ public class GptService {
         this.apiKey = config.getString("api-key", "");
         this.intervalSeconds = config.getInt("interval-seconds", 60);
         this.enabled = config.getBoolean("enabled", false);
+        this.model = config.getString("model", "gpt-3.5-turbo");
+        this.temperature = config.getDouble("temperature", 0.8);
 
         if (enabled) {
             new BukkitRunnable() {
@@ -189,13 +193,14 @@ public class GptService {
         logRequest(request);
 
         JSONObject payload = new JSONObject();
-        payload.put("model", "gpt-3.5-turbo");
+        payload.put("model", model);
         JSONArray messages = new JSONArray();
         JSONObject message = new JSONObject();
         message.put("role", "user");
         message.put("content", request.prompt);
         messages.put(message);
         payload.put("messages", messages);
+        payload.put("temperature", temperature);
 
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.openai.com/v1/chat/completions"))

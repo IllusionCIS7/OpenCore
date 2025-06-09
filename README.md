@@ -33,6 +33,19 @@ password: password
 
 OpenCore nutzt einen HikariCP-Pool mit zehn Verbindungen. Beim Start wird ein Ping ausgeführt und im Log ausgegeben.
 
+## GPT-Konfiguration
+Das GPT-Modul wird in `gpt.yml` eingestellt:
+
+```yml
+enabled: true
+api-key: "REPLACE-ME"
+interval-seconds: 600
+model: "gpt-3.5-turbo"
+temperature: 0.8
+```
+
+`model` bestimmt das zu verwendende OpenAI-Modell, `temperature` die Kreativität der Antworten.
+
 ## 🧠 Ziel
 Ein Server, der durch Spieler gesteuert, durch GPT unterstützt und durch klare Regeln geschützt wird.
 
