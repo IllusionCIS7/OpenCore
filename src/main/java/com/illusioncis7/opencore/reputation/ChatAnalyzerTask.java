@@ -114,12 +114,19 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         });
     }
 
+    /**
+     * Resolve the player's UUID for a given alias. GPT occasionally returns a
+     * shortened alias. To make the resolution more robust we first try an
+     * exact match and then fall back to a prefix search.
+     */
     private UUID resolveAlias(String alias) {
         if (!database.isConnected()) return null;
+
+        // Try exact match first
         String sql = "SELECT uuid FROM player_registry WHERE alias_id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, alias);
+            ps.setString(1, alias.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return UUID.fromString(rs.getString(1));
@@ -128,6 +135,22 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         } catch (Exception e) {
             logger.warning("Alias lookup failed: " + e.getMessage());
         }
+
+        // Fallback: allow prefix match for shortened aliases
+        String likeSql = "SELECT uuid FROM player_registry WHERE alias_id LIKE ? LIMIT 1";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(likeSql)) {
+            ps.setString(1, alias.trim() + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return UUID.fromString(rs.getString(1));
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Alias prefix lookup failed: " + e.getMessage());
+        }
+
+        logger.fine("Alias not found: " + alias);
         return null;
     }
 
