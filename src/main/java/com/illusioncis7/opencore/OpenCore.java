@@ -123,79 +123,43 @@ public class OpenCore extends JavaPlugin {
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
 
         SuggestCommand suggestCmd = new SuggestCommand(votingService);
-        Objects.requireNonNull(getCommand("suggest")).setExecutor(suggestCmd);
-        getCommand("suggest").setTabCompleter(suggestCmd);
 
         SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
-        Objects.requireNonNull(getCommand("suggestions")).setExecutor(listCmd);
-        getCommand("suggestions").setTabCompleter(listCmd);
 
         VoteCommand voteCmd = new VoteCommand(votingService);
-        Objects.requireNonNull(getCommand("vote")).setExecutor(voteCmd);
-        getCommand("vote").setTabCompleter(voteCmd);
         if (!moduleSuggestions) {
             getLogger().info("Suggestions module disabled via modules.yml");
         }
 
         RulesCommand rulesCmd = new RulesCommand(ruleService);
-        Objects.requireNonNull(getCommand("rules")).setExecutor(rulesCmd);
-        getCommand("rules").setTabCompleter(rulesCmd);
 
         EditRuleCommand editRuleCmd = new EditRuleCommand(ruleService);
-        Objects.requireNonNull(getCommand("editrule")).setExecutor(editRuleCmd);
-        getCommand("editrule").setTabCompleter(editRuleCmd);
 
         com.illusioncis7.opencore.rules.command.RuleHistoryCommand ruleHistCmd = new com.illusioncis7.opencore.rules.command.RuleHistoryCommand(ruleService);
-        Objects.requireNonNull(getCommand("rulehistory")).setExecutor(ruleHistCmd);
-        getCommand("rulehistory").setTabCompleter(ruleHistCmd);
 
         RollbackConfigCommand rollCmd = new RollbackConfigCommand(configService);
-        Objects.requireNonNull(getCommand("rollbackconfig")).setExecutor(rollCmd);
-        getCommand("rollbackconfig").setTabCompleter(rollCmd);
 
         com.illusioncis7.opencore.reputation.command.MyRepCommand myRepCmd = new com.illusioncis7.opencore.reputation.command.MyRepCommand(reputationService);
-        Objects.requireNonNull(getCommand("myrep")).setExecutor(myRepCmd);
-        getCommand("myrep").setTabCompleter(myRepCmd);
 
         com.illusioncis7.opencore.gpt.command.GptLogCommand gptLogCmd = new com.illusioncis7.opencore.gpt.command.GptLogCommand(gptResponseHandler);
-        Objects.requireNonNull(getCommand("gptlog")).setExecutor(gptLogCmd);
-        getCommand("gptlog").setTabCompleter(gptLogCmd);
 
         com.illusioncis7.opencore.reputation.command.RepInfoCommand repInfoCmd = new com.illusioncis7.opencore.reputation.command.RepInfoCommand(reputationService);
-        Objects.requireNonNull(getCommand("repinfo")).setExecutor(repInfoCmd);
-        getCommand("repinfo").setTabCompleter(repInfoCmd);
 
         com.illusioncis7.opencore.reputation.command.RepChangeCommand repChangeCmd = new com.illusioncis7.opencore.reputation.command.RepChangeCommand(reputationService);
-        Objects.requireNonNull(getCommand("repchange")).setExecutor(repChangeCmd);
-        getCommand("repchange").setTabCompleter(repChangeCmd);
 
         com.illusioncis7.opencore.reputation.command.ChatFlagsCommand chatFlagsCmd = new com.illusioncis7.opencore.reputation.command.ChatFlagsCommand(chatFlagService);
-        Objects.requireNonNull(getCommand("chatflags")).setExecutor(chatFlagsCmd);
-        getCommand("chatflags").setTabCompleter(chatFlagsCmd);
 
         com.illusioncis7.opencore.reputation.command.ChatAnalyzeCommand chatAnalyzeCmd = new com.illusioncis7.opencore.reputation.command.ChatAnalyzeCommand(this);
-        Objects.requireNonNull(getCommand("chatanalyze")).setExecutor(chatAnalyzeCmd);
-        getCommand("chatanalyze").setTabCompleter(chatAnalyzeCmd);
 
         com.illusioncis7.opencore.admin.ReloadCommand reloadCmd = new com.illusioncis7.opencore.admin.ReloadCommand(this);
-        Objects.requireNonNull(getCommand("reload")).setExecutor(reloadCmd);
-        getCommand("reload").setTabCompleter(reloadCmd);
 
         com.illusioncis7.opencore.admin.StatusCommand statusCmd = new com.illusioncis7.opencore.admin.StatusCommand(gptQueueManager, votingService, database, gptService);
-        Objects.requireNonNull(getCommand("status")).setExecutor(statusCmd);
-        getCommand("status").setTabCompleter(statusCmd);
 
         com.illusioncis7.opencore.admin.ImportSqlCommand importSqlCmd = new com.illusioncis7.opencore.admin.ImportSqlCommand(database);
-        Objects.requireNonNull(getCommand("importsql")).setExecutor(importSqlCmd);
-        getCommand("importsql").setTabCompleter(importSqlCmd);
 
         com.illusioncis7.opencore.config.command.ConfigListCommand cfgListCmd = new com.illusioncis7.opencore.config.command.ConfigListCommand(configService);
-        Objects.requireNonNull(getCommand("configlist")).setExecutor(cfgListCmd);
-        getCommand("configlist").setTabCompleter(cfgListCmd);
 
         com.illusioncis7.opencore.voting.command.VoteStatusCommand voteStatusCmd = new com.illusioncis7.opencore.voting.command.VoteStatusCommand(votingService);
-        Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
-        getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
         coreCommand = new com.illusioncis7.opencore.command.OpenCoreCommand(this, messageService);
         coreCommand.register("suggest", suggestCmd);
