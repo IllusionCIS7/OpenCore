@@ -5,6 +5,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.net.URI;
@@ -49,13 +50,15 @@ public class GptService {
     private String model;
     private double temperature;
 
+    private BukkitTask task;
+
     public GptService(JavaPlugin plugin, Database database, PolicyService policyService) {
         this.plugin = plugin;
         this.database = database;
         this.policyService = policyService;
     }
 
-    public void init() {
+    public synchronized void init() {
         File configFile = new File(plugin.getDataFolder(), "gpt.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         this.apiKey = config.getString("api-key", "");
@@ -64,8 +67,13 @@ public class GptService {
         this.model = config.getString("model", "gpt-3.5-turbo");
         this.temperature = config.getDouble("temperature", 0.8);
 
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+
         if (enabled) {
-            new BukkitRunnable() {
+            task = new BukkitRunnable() {
                 @Override
                 public void run() {
                     processNext();
@@ -76,8 +84,17 @@ public class GptService {
         }
     }
 
-    public void shutdown() {
+    public synchronized void shutdown() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
         queue.clear();
+    }
+
+    /** Reload configuration and restart the scheduler. */
+    public void reload() {
+        init();
     }
 
     /**
