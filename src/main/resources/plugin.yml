@@ -4,6 +4,10 @@ main: com.illusioncis7.opencore.OpenCore
 api-version: 1.21
 softdepend: [Plan]
 commands:
+  opencore:
+    description: Root command for OpenCore
+    aliases: [oc]
+    permission: opencore.command.opencore
   suggest:
     description: Submit a configuration suggestion
     permission: opencore.command.suggest
