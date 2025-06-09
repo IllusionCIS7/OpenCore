@@ -268,6 +268,26 @@ public class OpenCore extends JavaPlugin {
         return coreCommand;
     }
 
+    /** Reload GPT service configuration. */
+    public void reloadGptService() {
+        if (gptService != null) {
+            gptService.reload();
+        }
+    }
+
+    /** Reload module flags from modules.yml. */
+    public void reloadModules() {
+        org.bukkit.configuration.file.FileConfiguration modCfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.File(getDataFolder(), "modules.yml"));
+        org.bukkit.configuration.ConfigurationSection mods = modCfg.getConfigurationSection("modules");
+        if (mods != null) {
+            moduleConfigGrabber = mods.getBoolean("config-grabber", true);
+            moduleSuggestions = mods.getBoolean("suggestions", true);
+            moduleChatAnalyzer = mods.getBoolean("chat-analyzer", true);
+        }
+    }
+
     /** Start the periodic chat analyzer using the configured interval. */
     private void startChatAnalyzer() {
         int ticks = reputationService.getAnalysisIntervalMinutes() * 60 * 20;
@@ -281,6 +301,8 @@ public class OpenCore extends JavaPlugin {
             chatAnalyzerTimer.cancel();
         }
         int ticks = reputationService.getAnalysisIntervalMinutes() * 60 * 20;
+        chatAnalyzerTask = new com.illusioncis7.opencore.reputation.ChatAnalyzerTask(
+                database, gptService, reputationService, chatFlagService, ruleService, getLogger());
         chatAnalyzerTimer = chatAnalyzerTask.runTaskTimerAsynchronously(this, ticks, ticks);
     }
 
