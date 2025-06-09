@@ -41,6 +41,7 @@ Jeder Befehl besitzt eine eigene Permission:
 
 | Command | Permission |
 |---------|------------|
+| /opencore (alias /oc) | `opencore.command.opencore` |
 | /suggest | `opencore.command.suggest` |
 | /suggestions | `opencore.command.suggestions` |
 | /vote | `opencore.command.vote` |
@@ -57,3 +58,5 @@ Jeder Befehl besitzt eine eigene Permission:
 | /rulehistory | `opencore.command.rulehistory` |
 | /chatflags | `opencore.command.chatflags` |
 | /reload | `opencore.command.reload` |
+
+Alle Befehle lassen sich auch als Unterbefehle von `/opencore` bzw. `/oc` ausführen. Die deutschen Aliase sind in `command-aliases.yml` definiert und können angepasst werden.

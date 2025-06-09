@@ -45,6 +45,7 @@ public class OpenCore extends JavaPlugin {
     private VotingService votingService;
     private PlanHook planHook;
     private MessageService messageService;
+    private com.illusioncis7.opencore.command.OpenCoreCommand coreCommand;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
     private com.illusioncis7.opencore.reputation.ChatAnalyzerTask chatAnalyzerTask;
@@ -196,6 +197,29 @@ public class OpenCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("votestatus")).setExecutor(voteStatusCmd);
         getCommand("votestatus").setTabCompleter(voteStatusCmd);
 
+        coreCommand = new com.illusioncis7.opencore.command.OpenCoreCommand(this, messageService);
+        coreCommand.register("suggest", suggestCmd);
+        coreCommand.register("suggestions", listCmd);
+        coreCommand.register("vote", voteCmd);
+        coreCommand.register("rules", rulesCmd);
+        coreCommand.register("rollbackconfig", rollCmd);
+        coreCommand.register("myrep", myRepCmd);
+        coreCommand.register("gptlog", gptLogCmd);
+        coreCommand.register("repinfo", repInfoCmd);
+        coreCommand.register("repchange", repChangeCmd);
+        coreCommand.register("status", statusCmd);
+        coreCommand.register("configlist", cfgListCmd);
+        coreCommand.register("votestatus", voteStatusCmd);
+        coreCommand.register("editrule", editRuleCmd);
+        coreCommand.register("rulehistory", ruleHistCmd);
+        coreCommand.register("chatflags", chatFlagsCmd);
+        coreCommand.register("reload", reloadCmd);
+        coreCommand.register("importsql", importSqlCmd);
+        coreCommand.register("chatanalyze", chatAnalyzeCmd);
+
+        Objects.requireNonNull(getCommand("opencore")).setExecutor(coreCommand);
+        getCommand("opencore").setTabCompleter(coreCommand);
+
         if (moduleChatAnalyzer) {
             startChatAnalyzer();
         } else {
@@ -274,6 +298,10 @@ public class OpenCore extends JavaPlugin {
 
     public MessageService getMessageService() {
         return messageService;
+    }
+
+    public com.illusioncis7.opencore.command.OpenCoreCommand getCoreCommand() {
+        return coreCommand;
     }
 
     /** Start the periodic chat analyzer using the configured interval. */

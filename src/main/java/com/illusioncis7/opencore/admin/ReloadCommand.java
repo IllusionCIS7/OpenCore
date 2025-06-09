@@ -31,6 +31,7 @@ public class ReloadCommand implements TabExecutor {
             if (rep != null) {
                 rep.reload();
             }
+            OpenCore.getInstance().getCoreCommand().loadAliases();
             plugin.reloadChatAnalyzer();
             plugin.getMessageService().send(sender, "reload.success", null);
         } catch (Exception e) {

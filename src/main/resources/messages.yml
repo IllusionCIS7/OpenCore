@@ -110,6 +110,10 @@ response:
   module: "&e[{module}] {text}"
   plain: "{text}"
 
+core:
+  usage: "&cVerwendung: /oc <Befehl>"
+  unknown: "&cUnbekannter Unterbefehl: {sub}"
+
 join:
   privacy_warning:
     - "&cBitte teile keine sensiblen Daten im \u00F6ffentlichen Chat."

@@ -1,0 +1,37 @@
+aliases:
+  suggest:
+    - vorschlag
+  suggestions:
+    - vorschlaege
+  vote:
+    - abstimmen
+  rules:
+    - regeln
+  rollbackconfig:
+    - rollback
+  myrep:
+    - ruf
+  gptlog:
+    - gptlog
+  repinfo:
+    - repinfo
+  repchange:
+    - repaenderung
+  status:
+    - status
+  configlist:
+    - configliste
+  votestatus:
+    - abstimmstatus
+  editrule:
+    - regelbearbeiten
+  rulehistory:
+    - regelverlauf
+  chatflags:
+    - chatflags
+  reload:
+    - neuladen
+  importsql:
+    - importsql
+  chatanalyze:
+    - chatanalyse
