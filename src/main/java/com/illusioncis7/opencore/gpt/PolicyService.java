@@ -1,218 +1,94 @@
 package com.illusioncis7.opencore.gpt;
 
-import com.illusioncis7.opencore.database.Database;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.sql.*;
-import java.time.Instant;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
 
 /**
- * Central storage and retrieval of GPT policies.
+ * Loads GPT policy texts from files inside the plugin data folder.
+ * The directory <code>gpt_policies</code> contains one <code>.txt</code> file per
+ * policy. The filename without extension is used as policy name.
+ * Missing files are created empty during plugin startup.
  */
 public class PolicyService {
     private final JavaPlugin plugin;
-    private final Database database;
-    private final Map<String, String> defaults = new HashMap<>();
+    private final File policyDir;
+    private final Map<String, String> policies = new HashMap<>();
 
-    public PolicyService(JavaPlugin plugin, Database database) {
+    // policies referenced in the code base
+    private static final Set<String> REQUIRED = Set.of(
+            "chat_analysis",
+            "suggest_classify",
+            "rule_map"
+    );
+
+    public PolicyService(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.database = database;
-        loadDefaults();
-        initTable();
-    }
-
-    private void initTable() {
-        if (!database.isConnected()) return;
-        String sql;
-        if (database.isSQLite()) {
-            sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "name TEXT NOT NULL," +
-                    "policy_text TEXT NOT NULL," +
-                    "version INT NOT NULL," +
-                    "active BOOLEAN DEFAULT 1," +
-                    "last_updated TIMESTAMP NOT NULL" +
-                    ")";
-        } else {
-            sql = "CREATE TABLE IF NOT EXISTS gpt_policies (" +
-                    "id INT AUTO_INCREMENT PRIMARY KEY," +
-                    "name VARCHAR(50) NOT NULL," +
-                    "policy_text TEXT NOT NULL," +
-                    "version INT NOT NULL," +
-                    "active BOOLEAN DEFAULT 1," +
-                    "last_updated TIMESTAMP NOT NULL" +
-                    ")";
+        this.policyDir = new File(plugin.getDataFolder(), "gpt_policies");
+        if (!policyDir.exists() && !policyDir.mkdirs()) {
+            plugin.getLogger().warning("Failed to create policy directory: " + policyDir);
         }
-        try (Connection conn = database.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(sql);
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to create gpt_policies: " + e.getMessage());
-        }
+        ensureFiles();
+        load();
     }
 
-    private void loadDefaults() {
-        defaults.put("suggest_classify", String.join("\n",
-                "Ziel:",
-                "Bewerte, ob ein Spieler-Vorschlag sinnvoll, redundant, unausgereift oder schädlich ist – unter Berücksichtigung der aktuellen Serverregeln und -ziele.",
-                "",
-                "Kontext:",
-                "* Der Vorschlag stammt von einem Spieler (%s).",
-                "* Dies sind die aktuell gültigen Serverregeln: %rules%",
-                "* Bitte achte auf Originalität, Fairness, technische Umsetzbarkeit und Serverbalance.",
-                "",
-                "Anweisung:",
-                "Antworte ausschließlich im folgenden JSON-Format (keine Kommentare, kein zusätzlicher Text):",
-                "",
-                "json:{",
-                "\"type\": \"rule\" | \"config\" | \"other\",",
-                "\"quality\": \"high\" | \"medium\" | \"low\",",
-                "\"redundant\": true | false,",
-                "\"impact\": 1-5,",
-                "\"reason\": \"kurze sachliche Begründung\"",
-                "}"
-        ));
-
-        defaults.put("chat_analysis", String.join("\n",
-                "Ziel:",
-                "Analysiere einen Ingame-Chatverlauf (%message%) und bewerte das Verhalten des Spielers im Kontext der Serveretikette.",
-                "",
-                "Kontext:",
-                "* Regeln für Verhalten lauten unter anderem: %rules%",
-                "* Es geht um Respekt, Konstruktivität und Communityförderung.",
-                "",
-                "Anweisung:",
-                "Antworte ausschließlich im folgenden JSON-Format:",
-                "",
-                "json:{",
-                "\"tone\": \"friendly\" | \"neutral\" | \"toxic\",",
-                "\"intention\": \"supportive\" | \"ironic\" | \"provocative\" | \"harmful\",",
-                "\"violation\": true | false,",
-                "\"confidence\": 1-5,",
-                "\"reason\": \"kurze Einschätzung\"",
-                "}"
-        ));
-
-        defaults.put("rule_map", String.join("\n",
-                "Ziel:",
-                "Strukturiere einen neuen Regeltext so, dass er eindeutig, kategorisiert und vollständig ist.",
-                "",
-                "Kontext:",
-                "* Vorschlagstext: %s",
-                "* Aktuelle Regeln: %rules%",
-                "* Die Regel muss einer von 3 Hauptkategorien zugewiesen werden: \"Verhalten\", \"Technik\", \"PvP\"",
-                "",
-                "Anweisung:",
-                "Antworte ausschließlich im folgenden JSON-Format:",
-                "",
-                "json:{",
-                "\"category\": \"Verhalten\" | \"Technik\" | \"PvP\",",
-                "\"rule_text\": \"fertig formulierter Regeltext\",",
-                "\"conflict_with_existing\": true | false,",
-                "\"reason\": \"optional, falls Konflikt erkannt\"",
-                "}"
-        ));
+    /** Reload all policy files from disk. */
+    public void reload() {
+        ensureFiles();
+        load();
     }
 
-    /** Retrieve the active policy text for the given module. */
+    /** Get the text of a loaded policy or {@code null} if unavailable. */
     public String getPolicy(String name) {
-        if (!database.isConnected()) return null;
-        String sql = "SELECT policy_text FROM gpt_policies WHERE name = ? AND active = 1 ORDER BY version DESC LIMIT 1";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString(1);
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to load policy for " + name + ": " + e.getMessage());
-        }
-        return defaults.get(name);
+        return policies.get(name);
     }
 
-    /** Insert a new version of a policy. */
-    public void setPolicy(String name, String text) {
-        if (!database.isConnected()) return;
-        try (Connection conn = database.getConnection()) {
-            int version = 1;
-            try (PreparedStatement ps = conn.prepareStatement("SELECT MAX(version) FROM gpt_policies WHERE name = ?")) {
-                ps.setString(1, name);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        version = rs.getInt(1) + 1;
-                    }
-                }
-            }
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE gpt_policies SET active = 0 WHERE name = ?")) {
-                ps.setString(1, name);
-                ps.executeUpdate();
-            }
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO gpt_policies (name, policy_text, version, active, last_updated) VALUES (?,?,?,?,?)")) {
-                ps.setString(1, name);
-                ps.setString(2, text);
-                ps.setInt(3, version);
-                ps.setBoolean(4, true);
-                ps.setTimestamp(5, Timestamp.from(Instant.now()));
-                ps.executeUpdate();
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to store policy " + name + ": " + e.getMessage());
-        }
-    }
-
-    /** List all policy names. */
+    /** List the names of all loaded policies. */
     public List<String> listPolicies() {
-        List<String> list = new ArrayList<>();
-        if (!database.isConnected()) return list;
-        String sql = "SELECT DISTINCT name FROM gpt_policies";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(rs.getString(1));
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to list policies: " + e.getMessage());
-        }
-        if (list.isEmpty()) {
-            list.addAll(defaults.keySet());
-        }
-        return list;
+        return new ArrayList<>(policies.keySet());
     }
 
-    /** Check whether a policy with the given name exists. */
+    /** Check whether a policy with the given name is loaded. */
     public boolean isDefined(String name) {
-        if (!database.isConnected()) return defaults.containsKey(name);
-        String sql = "SELECT COUNT(*) FROM gpt_policies WHERE name = ?";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
+        return policies.containsKey(name);
+    }
+
+    // ensure required policy files exist (empty) so admins can fill them
+    private void ensureFiles() {
+        for (String name : REQUIRED) {
+            File f = new File(policyDir, name + ".txt");
+            if (!f.exists()) {
+                try {
+                    if (!f.createNewFile()) {
+                        plugin.getLogger().warning("Could not create policy file " + f.getName());
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to create policy file " + f.getName() + ": " + e.getMessage());
                 }
             }
-        } catch (SQLException e) {
-            plugin.getLogger().warning("Failed to check policy: " + e.getMessage());
         }
-        return defaults.containsKey(name);
     }
 
-    /** Get the active policy or the built-in default. */
-    public String getOrDefault(String name) {
-        String p = getPolicy(name);
-        return p != null ? p : defaults.get(name);
-    }
-
-    /** Ensure all default policies exist in the database. */
-    public void ensureDefaults() {
-        for (Map.Entry<String, String> e : defaults.entrySet()) {
-            if (!isDefined(e.getKey())) {
-                setPolicy(e.getKey(), e.getValue());
+    private void load() {
+        policies.clear();
+        File[] files = policyDir.listFiles((dir, name) -> name.endsWith(".txt"));
+        if (files == null) {
+            return;
+        }
+        for (File f : files) {
+            try {
+                String text = Files.readString(f.toPath(), StandardCharsets.UTF_8).trim();
+                if (text.isEmpty()) {
+                    plugin.getLogger().warning("Policy file " + f.getName() + " is empty – ignored");
+                    continue;
+                }
+                String name = f.getName().substring(0, f.getName().length() - 4);
+                policies.put(name, text);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to load policy " + f.getName() + ": " + e.getMessage());
             }
         }
     }

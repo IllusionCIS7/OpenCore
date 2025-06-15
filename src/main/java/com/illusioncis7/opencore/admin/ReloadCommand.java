@@ -33,6 +33,7 @@ public class ReloadCommand implements TabExecutor {
             }
             OpenCore.getInstance().getCoreCommand().loadAliases();
             plugin.reloadModules();
+            plugin.reloadPolicies();
             plugin.reloadGptService();
             plugin.reloadChatAnalyzer();
             plugin.getMessageService().send(sender, "reload.success", null);
