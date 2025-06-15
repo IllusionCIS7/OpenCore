@@ -229,6 +229,17 @@ public class Database {
                     "betroffene_spieler TEXT" +
                     ")";
             stmt.executeUpdate(analysisSql);
+
+            String tokenSql = "CREATE TABLE IF NOT EXISTS web_access_tokens (" +
+                    "id VARCHAR(36) PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "token TEXT NOT NULL," +
+                    "type VARCHAR(20) NOT NULL," +
+                    "issued_at TIMESTAMP NOT NULL," +
+                    "expires_at TIMESTAMP NOT NULL," +
+                    "used BOOLEAN DEFAULT 0" +
+                    ")";
+            stmt.executeUpdate(tokenSql);
         }
     }
 
@@ -377,6 +388,17 @@ public class Database {
                     "betroffene_spieler TEXT" +
                     ")";
             stmt.executeUpdate(analysisSql);
+
+            String tokenSql = "CREATE TABLE IF NOT EXISTS web_access_tokens (" +
+                    "id TEXT PRIMARY KEY," +
+                    "player_uuid TEXT NOT NULL," +
+                    "token TEXT NOT NULL," +
+                    "type TEXT NOT NULL," +
+                    "issued_at TIMESTAMP NOT NULL," +
+                    "expires_at TIMESTAMP NOT NULL," +
+                    "used BOOLEAN DEFAULT 0" +
+                    ")";
+            stmt.executeUpdate(tokenSql);
         }
     }
 
