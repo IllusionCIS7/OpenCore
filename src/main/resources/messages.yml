@@ -126,3 +126,4 @@ chatanalyze:
 webtoken:
   suggestion: "&aVorschlagslink: {url}"
   vote: "&aAbstimmungslink: {url}"
+  webadmin: "&aAdmin-Panel: {url}"

@@ -423,5 +423,21 @@ public class ConfigService {
         }
         return count;
     }
+
+    /**
+     * Delete a configuration parameter record.
+     */
+    public boolean deleteParameter(int id) {
+        if (!database.isConnected()) return false;
+        String sql = "DELETE FROM config_params WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to delete config parameter: " + e.getMessage());
+            return false;
+        }
+    }
 }
 

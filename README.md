@@ -69,6 +69,7 @@ Jeder Befehl besitzt eine eigene Permission:
 | /votestatus | `opencore.command.votestatus` |
 | /editrule | `opencore.command.editrule` |
 | /rulehistory | `opencore.command.rulehistory` |
+| /webadmin | `opencore.command.webadmin` |
 | /chatflags | `opencore.command.chatflags` |
 | /reload | `opencore.command.reload` |
 
