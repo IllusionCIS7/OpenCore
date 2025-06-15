@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>OpenCore Admin</title>
+<style>
+body{font-family:Arial,sans-serif;margin:20px;}
+table{border-collapse:collapse;}
+th,td{border:1px solid #ccc;padding:4px;}
+</style>
+</head>
+<body>
+<h1>OpenCore Admin Panel</h1>
+<h2>Regeln</h2>
+<div id="rules">Lade...</div>
+<input id="ruleText" placeholder="Regeltext"/>
+<input id="ruleCat" placeholder="Kategorie"/>
+<button onclick="addRule()">Hinzufügen</button>
+<h2>Konfiguration</h2>
+<div id="configs">Lade...</div>
+<script>
+const token=new URLSearchParams(location.search).get('token');
+async function fetchJson(u,opt){const r=await fetch(u,opt);return r.ok?r.json():{};}
+async function loadRules(){const j=await fetchJson('/admin/rules?token='+encodeURIComponent(token));const div=document.getElementById('rules');div.innerHTML='';(j.rules||[]).forEach(r=>{const row=document.createElement('div');row.innerHTML='<input size="60" value="'+r.text+'"> <input value="'+(r.category||'')+'"> <button>Speichern</button> <button>Löschen</button>';const t=row.querySelector('input');const c=row.querySelectorAll('input')[1];row.querySelector('button').onclick=()=>updateRule(r.id,t.value,c.value);row.querySelectorAll('button')[1].onclick=()=>{deleteRule(r.id);row.remove();};div.appendChild(row);});}
+async function addRule(){const t=document.getElementById('ruleText').value;const c=document.getElementById('ruleCat').value;if(!t)return;await fetch('/admin/rules/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,text:t,category:c})});loadRules();}
+async function updateRule(id,t,c){await fetch('/admin/rules/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,id:id,text:t,category:c})});}
+async function deleteRule(id){await fetch('/admin/rules/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,id:id})});}
+async function loadConfigs(){const j=await fetchJson('/admin/configs?token='+encodeURIComponent(token));const div=document.getElementById('configs');div.innerHTML='';const table=document.createElement('table');div.appendChild(table);const head=document.createElement('tr');head.innerHTML='<th>Name</th><th>Wert</th><th></th><th></th>';table.appendChild(head);(j.parameters||[]).forEach(p=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+p.name+'</td><td><input value="'+(p.value||'')+'"></td><td><button>Speichern</button></td><td><button>Löschen</button></td>';const inp=tr.querySelector('input');tr.querySelector('button').onclick=()=>updateConfig(p.id,inp.value);tr.querySelectorAll('button')[1].onclick=()=>{deleteConfig(p.id);tr.remove();};table.appendChild(tr);});}
+async function updateConfig(id,v){await fetch('/admin/configs/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,id:id,value:v})});}
+async function deleteConfig(id){await fetch('/admin/configs/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,id:id})});}
+loadRules();loadConfigs();
+</script>
+</body>
+</html>

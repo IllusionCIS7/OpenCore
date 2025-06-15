@@ -20,6 +20,7 @@ import com.illusioncis7.opencore.rules.command.EditRuleCommand;
 import com.illusioncis7.opencore.web.WebTokenService;
 import com.illusioncis7.opencore.web.command.SuggestionTokenCommand;
 import com.illusioncis7.opencore.web.command.VoteTokenCommand;
+import com.illusioncis7.opencore.web.command.AdminTokenCommand;
 import com.illusioncis7.opencore.config.command.RollbackConfigCommand;
 import com.illusioncis7.opencore.config.command.ConfigListCommand;
 import com.illusioncis7.opencore.admin.StatusCommand;
@@ -79,6 +80,7 @@ public class OpenCore extends JavaPlugin {
         saveResource("webpanel/index.html", false);
         saveResource("webpanel/suggest.html", false);
         saveResource("webpanel/vote.html", false);
+        saveResource("webpanel/admin.html", false);
         saveResource("modules.yml", false);
 
         org.bukkit.configuration.file.FileConfiguration modCfg =
@@ -126,7 +128,8 @@ public class OpenCore extends JavaPlugin {
         webTokenService = new WebTokenService(this, database);
         commentService = new com.illusioncis7.opencore.web.SuggestionCommentService(this, database);
         try {
-            webInterfaceServer = new com.illusioncis7.opencore.web.WebInterfaceServer(webTokenService, votingService, commentService, getLogger());
+            webInterfaceServer = new com.illusioncis7.opencore.web.WebInterfaceServer(
+                    webTokenService, votingService, commentService, ruleService, configService, getLogger());
         } catch (Exception e) {
             getLogger().warning("Failed to start web interface: " + e.getMessage());
         }
@@ -137,6 +140,7 @@ public class OpenCore extends JavaPlugin {
 
         SuggestionTokenCommand suggestionTokenCmd = new SuggestionTokenCommand(webTokenService);
         VoteTokenCommand voteTokenCmd = new VoteTokenCommand(webTokenService);
+        AdminTokenCommand adminTokenCmd = new AdminTokenCommand(webTokenService);
         if (!moduleSuggestions) {
             getLogger().info("Suggestions module disabled via modules.yml");
         }
@@ -176,6 +180,7 @@ public class OpenCore extends JavaPlugin {
         coreCommand.register("suggestions", listCmd);
         coreCommand.register("suggestion", suggestionTokenCmd);
         coreCommand.register("vote", voteTokenCmd);
+        coreCommand.register("webadmin", adminTokenCmd);
         coreCommand.register("rules", rulesCmd);
         coreCommand.register("rollbackconfig", rollCmd);
         coreCommand.register("myrep", myRepCmd);

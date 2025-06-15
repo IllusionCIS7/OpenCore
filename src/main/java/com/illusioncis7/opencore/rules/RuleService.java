@@ -178,4 +178,20 @@ public class RuleService {
             return false;
         }
     }
+
+    /**
+     * Delete a rule by ID.
+     */
+    public boolean deleteRule(int id) {
+        if (!database.isConnected()) return false;
+        String sql = "DELETE FROM server_rules WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.warning("Failed to delete rule: " + e.getMessage());
+            return false;
+        }
+    }
 }

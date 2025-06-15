@@ -3,6 +3,10 @@ package com.illusioncis7.opencore.web;
 import com.illusioncis7.opencore.voting.Suggestion;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.web.SuggestionCommentService.Comment;
+import com.illusioncis7.opencore.rules.Rule;
+import com.illusioncis7.opencore.rules.RuleService;
+import com.illusioncis7.opencore.config.ConfigParameter;
+import com.illusioncis7.opencore.config.ConfigService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.json.JSONArray;
@@ -24,14 +28,20 @@ public class WebInterfaceServer {
     private final WebTokenService tokenService;
     private final VotingService votingService;
     private final SuggestionCommentService commentService;
+    private final RuleService ruleService;
+    private final ConfigService configService;
     private final Logger logger;
     private HttpServer server;
 
     public WebInterfaceServer(WebTokenService tokenService, VotingService votingService,
-                              SuggestionCommentService commentService, Logger logger) throws IOException {
+                              SuggestionCommentService commentService,
+                              RuleService ruleService, ConfigService configService,
+                              Logger logger) throws IOException {
         this.tokenService = tokenService;
         this.votingService = votingService;
         this.commentService = commentService;
+        this.ruleService = ruleService;
+        this.configService = configService;
         this.logger = logger;
         server = HttpServer.create(new InetSocketAddress(tokenService.getInternalHost(), tokenService.getInternalPort()), 0);
         registerContexts();
@@ -45,6 +55,15 @@ public class WebInterfaceServer {
         server.createContext("/submit-suggestion", this::handleSubmitSuggestion);
         server.createContext("/cast-vote", this::handleCastVote);
         server.createContext("/suggestion-comments", this::handleComments);
+        // admin endpoints
+        server.createContext("/admin/rules", this::handleAdminRules);
+        server.createContext("/admin/rules/add", this::handleAddRule);
+        server.createContext("/admin/rules/update", this::handleUpdateRule);
+        server.createContext("/admin/rules/delete", this::handleDeleteRule);
+        server.createContext("/admin/configs", this::handleAdminConfigs);
+        server.createContext("/admin/configs/update", this::handleUpdateConfig);
+        server.createContext("/admin/configs/add", this::handleAddConfig);
+        server.createContext("/admin/configs/delete", this::handleDeleteConfig);
     }
 
     public void stop() {
@@ -159,6 +178,111 @@ public class WebInterfaceServer {
         } else {
             ex.sendResponseHeaders(405, -1);
         }
+    }
+
+    /* ===== Admin handlers ===== */
+    private void handleAdminRules(HttpExchange ex) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        String token = getParam(ex, "token");
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        JSONArray arr = new JSONArray();
+        for (Rule r : ruleService.getRules()) {
+            JSONObject o = new JSONObject();
+            o.put("id", r.id);
+            o.put("text", r.text);
+            o.put("category", r.category);
+            arr.put(o);
+        }
+        writeJson(ex, new JSONObject().put("rules", arr));
+    }
+
+    private void handleAddRule(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        String text = req.optString("text", null);
+        String cat = req.optString("category", "");
+        if (text == null) { ex.sendResponseHeaders(400, -1); return; }
+        Rule r = ruleService.addRule(text, cat);
+        writeJson(ex, new JSONObject().put("id", r != null ? r.id : -1));
+    }
+
+    private void handleUpdateRule(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        int id = req.optInt("id", -1);
+        String text = req.optString("text", null);
+        String cat = req.optString("category", "");
+        if (id <= 0 || text == null) { ex.sendResponseHeaders(400, -1); return; }
+        boolean ok = ruleService.updateRule(id, text, null, null);
+        if (!ok) { ex.sendResponseHeaders(500, -1); return; }
+        if (cat != null) { /* not implemented to change category directly */ }
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleDeleteRule(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        int id = req.optInt("id", -1);
+        if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
+        boolean ok = ruleService.deleteRule(id);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleAdminConfigs(HttpExchange ex) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        String token = getParam(ex, "token");
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        JSONArray arr = new JSONArray();
+        for (ConfigParameter p : configService.listParameters()) {
+            JSONObject o = new JSONObject();
+            o.put("id", p.getId());
+            o.put("name", p.getYamlPath());
+            o.put("value", p.getCurrentValue());
+            arr.put(o);
+        }
+        writeJson(ex, new JSONObject().put("parameters", arr));
+    }
+
+    private void handleUpdateConfig(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        int id = req.optInt("id", -1);
+        String val = req.optString("value", null);
+        if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
+        boolean ok = configService.updateParameter(id, val, null);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleAddConfig(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        String file = req.optString("path", null);
+        String param = req.optString("parameter", null);
+        String value = req.optString("current", null);
+        if (file == null || param == null) { ex.sendResponseHeaders(400, -1); return; }
+        boolean ok = configService.registerParameter(file, param, false, "", value, null, null);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleDeleteConfig(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        int id = req.optInt("id", -1);
+        if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
+        boolean ok = configService.deleteParameter(id);
+        writeJson(ex, new JSONObject().put("success", ok));
     }
 
     private JSONObject readJson(HttpExchange ex) throws IOException {
