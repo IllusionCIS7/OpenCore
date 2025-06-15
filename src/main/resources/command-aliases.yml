@@ -3,6 +3,8 @@ aliases:
     - vorschlag
   suggestions:
     - vorschlaege
+  suggestion:
+    - vorschlaglink
   vote:
     - abstimmen
   rules:
