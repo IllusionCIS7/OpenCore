@@ -13,11 +13,13 @@ import com.illusioncis7.opencore.reputation.ChatReputationFlagService;
 import com.illusioncis7.opencore.voting.VotingService;
 import com.illusioncis7.opencore.voting.command.SuggestCommand;
 import com.illusioncis7.opencore.voting.command.SuggestionsCommand;
-import com.illusioncis7.opencore.voting.command.VoteCommand;
 import com.illusioncis7.opencore.voting.command.VoteStatusCommand;
 import com.illusioncis7.opencore.rules.RuleService;
 import com.illusioncis7.opencore.rules.command.RulesCommand;
 import com.illusioncis7.opencore.rules.command.EditRuleCommand;
+import com.illusioncis7.opencore.web.WebTokenService;
+import com.illusioncis7.opencore.web.command.SuggestionTokenCommand;
+import com.illusioncis7.opencore.web.command.VoteTokenCommand;
 import com.illusioncis7.opencore.config.command.RollbackConfigCommand;
 import com.illusioncis7.opencore.config.command.ConfigListCommand;
 import com.illusioncis7.opencore.admin.StatusCommand;
@@ -45,6 +47,7 @@ public class OpenCore extends JavaPlugin {
     private VotingService votingService;
     private PlanHook planHook;
     private MessageService messageService;
+    private WebTokenService webTokenService;
     private com.illusioncis7.opencore.command.OpenCoreCommand coreCommand;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
@@ -70,6 +73,7 @@ public class OpenCore extends JavaPlugin {
         saveResource("voting.yml", false);
         saveResource("api.yml", false);
         saveResource("messages.yml", false);
+        saveResource("opencore.yml", false);
         saveResource("webpanel/index.html", false);
         saveResource("modules.yml", false);
 
@@ -115,11 +119,14 @@ public class OpenCore extends JavaPlugin {
 
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
 
+        webTokenService = new WebTokenService(this, database);
+
         SuggestCommand suggestCmd = new SuggestCommand(votingService);
 
         SuggestionsCommand listCmd = new SuggestionsCommand(votingService);
 
-        VoteCommand voteCmd = new VoteCommand(votingService);
+        SuggestionTokenCommand suggestionTokenCmd = new SuggestionTokenCommand(webTokenService);
+        VoteTokenCommand voteTokenCmd = new VoteTokenCommand(webTokenService);
         if (!moduleSuggestions) {
             getLogger().info("Suggestions module disabled via modules.yml");
         }
@@ -157,7 +164,8 @@ public class OpenCore extends JavaPlugin {
         coreCommand = new com.illusioncis7.opencore.command.OpenCoreCommand(this, messageService);
         coreCommand.register("suggest", suggestCmd);
         coreCommand.register("suggestions", listCmd);
-        coreCommand.register("vote", voteCmd);
+        coreCommand.register("suggestion", suggestionTokenCmd);
+        coreCommand.register("vote", voteTokenCmd);
         coreCommand.register("rules", rulesCmd);
         coreCommand.register("rollbackconfig", rollCmd);
         coreCommand.register("myrep", myRepCmd);

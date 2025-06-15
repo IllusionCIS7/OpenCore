@@ -123,3 +123,6 @@ join:
   module_disabled: "&cDieses Modul ist deaktiviert."
 chatanalyze:
   started: "&aChat-Analyse wird ausgef\u00FChrt."
+webtoken:
+  suggestion: "&aVorschlagslink: {url}"
+  vote: "&aAbstimmungslink: {url}"
