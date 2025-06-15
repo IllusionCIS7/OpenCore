@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Vote</title></head>
 <body>
+<div id="userinfo"></div>
 <h2>Abstimmungen</h2>
 <div id="list">Lade...</div>
 <script>
 const token=new URLSearchParams(location.search).get('token');
+async function validate(){const r=await fetch('/validate-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'vote'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
 async function load(){
  const r=await fetch('/suggestions?token='+encodeURIComponent(token));
  const j=await r.json();
@@ -24,6 +26,6 @@ async function vote(id,yes){
  await fetch('/cast-vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,suggestion:id,vote:yes?'yes':'no'})});
  load();
 }
-load();
+validate().then(ok=>{if(ok){load();}});
 </script>
 </body></html>

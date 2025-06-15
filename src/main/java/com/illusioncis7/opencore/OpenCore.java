@@ -129,7 +129,8 @@ public class OpenCore extends JavaPlugin {
         commentService = new com.illusioncis7.opencore.web.SuggestionCommentService(this, database);
         try {
             webInterfaceServer = new com.illusioncis7.opencore.web.WebInterfaceServer(
-                    webTokenService, votingService, commentService, ruleService, configService, getLogger());
+                    webTokenService, votingService, commentService, ruleService, configService,
+                    reputationService, getLogger());
         } catch (Exception e) {
             getLogger().warning("Failed to start web interface: " + e.getMessage());
         }

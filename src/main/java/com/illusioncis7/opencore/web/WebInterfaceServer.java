@@ -9,6 +9,8 @@ import com.illusioncis7.opencore.config.ConfigParameter;
 import com.illusioncis7.opencore.config.ConfigService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.bukkit.Bukkit;
+import com.illusioncis7.opencore.reputation.ReputationService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -30,18 +32,21 @@ public class WebInterfaceServer {
     private final SuggestionCommentService commentService;
     private final RuleService ruleService;
     private final ConfigService configService;
+    private final ReputationService reputationService;
     private final Logger logger;
     private HttpServer server;
 
     public WebInterfaceServer(WebTokenService tokenService, VotingService votingService,
                               SuggestionCommentService commentService,
                               RuleService ruleService, ConfigService configService,
+                              ReputationService reputationService,
                               Logger logger) throws IOException {
         this.tokenService = tokenService;
         this.votingService = votingService;
         this.commentService = commentService;
         this.ruleService = ruleService;
         this.configService = configService;
+        this.reputationService = reputationService;
         this.logger = logger;
         server = HttpServer.create(new InetSocketAddress(tokenService.getInternalHost(), tokenService.getInternalPort()), 0);
         registerContexts();
@@ -55,6 +60,8 @@ public class WebInterfaceServer {
         server.createContext("/submit-suggestion", this::handleSubmitSuggestion);
         server.createContext("/cast-vote", this::handleCastVote);
         server.createContext("/suggestion-comments", this::handleComments);
+        server.createContext("/rules", this::handleRules);
+        server.createContext("/configs", this::handleConfigs);
         // static pages
         server.createContext("/suggest", ex -> servePage(ex, "suggest.html"));
         server.createContext("/vote", ex -> servePage(ex, "vote.html"));
@@ -82,13 +89,18 @@ public class WebInterfaceServer {
         UUID player = tokenService.validateToken(token, type);
         JSONObject resp = new JSONObject();
         resp.put("valid", player != null);
-        if (player != null) resp.put("player", player.toString());
+        if (player != null) {
+            resp.put("player", player.toString());
+            String name = Bukkit.getOfflinePlayer(player).getName();
+            if (name != null) resp.put("name", name);
+            resp.put("reputation", reputationService.getReputation(player));
+        }
         writeJson(ex, resp);
     }
 
     private void handleSuggestions(HttpExchange ex) throws IOException {
         String token = getParam(ex, "token");
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "vote") == null) { ex.sendResponseHeaders(403, -1); return; }
         JSONArray arr = new JSONArray();
         for (Suggestion s : votingService.getOpenSuggestions()) {
             VotingService.VoteWeights w = votingService.getVoteWeights(s.id);
@@ -126,7 +138,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        UUID player = tokenService.checkToken(token);
+        UUID player = tokenService.checkToken(token, "suggestion");
         if (player == null) { ex.sendResponseHeaders(403, -1); return; }
         int paramId = req.optInt("parameter", -1);
         String value = req.optString("value", null);
@@ -142,7 +154,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        UUID player = tokenService.checkToken(token);
+        UUID player = tokenService.checkToken(token, "vote");
         if (player == null) { ex.sendResponseHeaders(403, -1); return; }
         int suggestion = req.optInt("suggestion", -1);
         String vote = req.optString("vote", "");
@@ -157,7 +169,7 @@ public class WebInterfaceServer {
     private void handleComments(HttpExchange ex) throws IOException {
         if ("GET".equalsIgnoreCase(ex.getRequestMethod())) {
             String token = getParam(ex, "token");
-            if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+            if (tokenService.checkToken(token, "vote") == null) { ex.sendResponseHeaders(403, -1); return; }
             int id = Integer.parseInt(getParam(ex, "suggestion"));
             List<Comment> list = commentService.getComments(id);
             JSONArray arr = new JSONArray();
@@ -172,7 +184,7 @@ public class WebInterfaceServer {
         } else if ("POST".equalsIgnoreCase(ex.getRequestMethod())) {
             JSONObject req = readJson(ex);
             String token = req.optString("token", null);
-            UUID player = tokenService.checkToken(token);
+            UUID player = tokenService.checkToken(token, "vote");
             if (player == null) { ex.sendResponseHeaders(403, -1); return; }
             int id = req.optInt("suggestion", -1);
             String content = req.optString("content", "");
@@ -184,11 +196,41 @@ public class WebInterfaceServer {
         }
     }
 
+    private void handleRules(HttpExchange ex) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        String token = getParam(ex, "token");
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
+        JSONArray arr = new JSONArray();
+        for (Rule r : ruleService.getRules()) {
+            JSONObject o = new JSONObject();
+            o.put("id", r.id);
+            o.put("text", r.text);
+            o.put("category", r.category);
+            arr.put(o);
+        }
+        writeJson(ex, new JSONObject().put("rules", arr));
+    }
+
+    private void handleConfigs(HttpExchange ex) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        String token = getParam(ex, "token");
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
+        JSONArray arr = new JSONArray();
+        for (ConfigParameter p : configService.listParameters()) {
+            JSONObject o = new JSONObject();
+            o.put("id", p.getId());
+            o.put("name", p.getYamlPath());
+            o.put("value", p.getCurrentValue());
+            arr.put(o);
+        }
+        writeJson(ex, new JSONObject().put("parameters", arr));
+    }
+
     /* ===== Admin handlers ===== */
     private void handleAdminRules(HttpExchange ex) throws IOException {
         if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         String token = getParam(ex, "token");
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         JSONArray arr = new JSONArray();
         for (Rule r : ruleService.getRules()) {
             JSONObject o = new JSONObject();
@@ -204,7 +246,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         String text = req.optString("text", null);
         String cat = req.optString("category", "");
         if (text == null) { ex.sendResponseHeaders(400, -1); return; }
@@ -216,7 +258,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         int id = req.optInt("id", -1);
         String text = req.optString("text", null);
         String cat = req.optString("category", "");
@@ -231,7 +273,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         int id = req.optInt("id", -1);
         if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
         boolean ok = ruleService.deleteRule(id);
@@ -241,7 +283,7 @@ public class WebInterfaceServer {
     private void handleAdminConfigs(HttpExchange ex) throws IOException {
         if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         String token = getParam(ex, "token");
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         JSONArray arr = new JSONArray();
         for (ConfigParameter p : configService.listParameters()) {
             JSONObject o = new JSONObject();
@@ -257,7 +299,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         int id = req.optInt("id", -1);
         String val = req.optString("value", null);
         if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
@@ -269,7 +311,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         String file = req.optString("path", null);
         String param = req.optString("parameter", null);
         String value = req.optString("current", null);
@@ -282,7 +324,7 @@ public class WebInterfaceServer {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
         JSONObject req = readJson(ex);
         String token = req.optString("token", null);
-        if (tokenService.checkToken(token) == null) { ex.sendResponseHeaders(403, -1); return; }
+        if (tokenService.checkToken(token, "admin") == null) { ex.sendResponseHeaders(403, -1); return; }
         int id = req.optInt("id", -1);
         if (id <= 0) { ex.sendResponseHeaders(400, -1); return; }
         boolean ok = configService.deleteParameter(id);

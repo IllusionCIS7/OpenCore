@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Suggest</title></head>
 <body>
+<div id="userinfo"></div>
 <h2>Neuer Vorschlag</h2>
-<label>Parameter ID: <input id="param"></label><br/>
+<h3>Regeln</h3>
+<ul id="rules"></ul>
+<h3>Konfigurationsparameter</h3>
+<select id="param"></select><br/>
 <label>Neuer Wert: <input id="value"></label><br/>
 <label>Begründung:<br/><textarea id="reason"></textarea></label><br/>
 <button onclick="submit()">Absenden</button>
 <script>
 const token=new URLSearchParams(location.search).get('token');
+async function validate(){const r=await fetch('/validate-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'suggestion'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
+async function loadRules(){const r=await fetch('/rules?token='+encodeURIComponent(token));const j=await r.json();const ul=document.getElementById('rules');ul.innerHTML='';(j.rules||[]).forEach(rr=>{const li=document.createElement('li');li.textContent=rr.text;ul.appendChild(li);});}
+async function loadConfigs(){const r=await fetch('/configs?token='+encodeURIComponent(token));const j=await r.json();const sel=document.getElementById('param');sel.innerHTML='';(j.parameters||[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});}
 async function submit(){
   const r=await fetch('/submit-suggestion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,parameter:parseInt(document.getElementById('param').value),value:document.getElementById('value').value,reason:document.getElementById('reason').value})});
   const j=await r.json();
   alert('Gesendet, ID '+j.id);
 }
+validate().then(ok=>{if(ok){loadRules();loadConfigs();}});
 </script>
 </body></html>
