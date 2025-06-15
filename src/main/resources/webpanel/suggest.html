@@ -12,7 +12,7 @@
 <button onclick="submit()">Absenden</button>
 <script>
 const token=new URLSearchParams(location.search).get('token');
-async function validate(){const r=await fetch('/validate-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'suggestion'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
+async function validate(){const r=await fetch('/check-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'suggestion'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
 async function loadRules(){const r=await fetch('/rules?token='+encodeURIComponent(token));const j=await r.json();const ul=document.getElementById('rules');ul.innerHTML='';(j.rules||[]).forEach(rr=>{const li=document.createElement('li');li.textContent=rr.text;ul.appendChild(li);});}
 async function loadConfigs(){const r=await fetch('/configs?token='+encodeURIComponent(token));const j=await r.json();const sel=document.getElementById('param');sel.innerHTML='';(j.parameters||[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});}
 async function submit(){

@@ -6,7 +6,7 @@
 <div id="list">Lade...</div>
 <script>
 const token=new URLSearchParams(location.search).get('token');
-async function validate(){const r=await fetch('/validate-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'vote'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
+async function validate(){const r=await fetch('/check-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,type:'vote'})});const j=await r.json();if(!j.valid){document.body.innerText='Token ungültig';return false;}document.getElementById('userinfo').innerText=j.name+' (Rep '+j.reputation+')';return true;}
 async function load(){
  const r=await fetch('/suggestions?token='+encodeURIComponent(token));
  const j=await r.json();
