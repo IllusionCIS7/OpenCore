@@ -49,6 +49,9 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         if (messages.isEmpty()) {
             return;
         }
+        // Apply heuristic pseudonymization before building the GPT prompt
+        HeuristicPreprocessor pre = new HeuristicPreprocessor(database, logger);
+        messages = pre.preprocess(messages);
         StringBuilder data = new StringBuilder();
         for (ChatMessage msg : messages) {
             data.append("[" + msg.aliasId + "]" + ": " + msg.message + "\n");
@@ -233,7 +236,7 @@ public class ChatAnalyzerTask extends BukkitRunnable {
         }
     }
 
-    private static class ChatMessage {
+    static class ChatMessage {
         final long id;
         final UUID uuid;
         final String aliasId;
