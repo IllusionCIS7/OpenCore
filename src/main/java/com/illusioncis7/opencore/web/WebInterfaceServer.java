@@ -55,6 +55,10 @@ public class WebInterfaceServer {
         server.createContext("/submit-suggestion", this::handleSubmitSuggestion);
         server.createContext("/cast-vote", this::handleCastVote);
         server.createContext("/suggestion-comments", this::handleComments);
+        // static pages
+        server.createContext("/suggest", ex -> servePage(ex, "suggest.html"));
+        server.createContext("/vote", ex -> servePage(ex, "vote.html"));
+        server.createContext("/admin", ex -> servePage(ex, "admin.html"));
         // admin endpoints
         server.createContext("/admin/rules", this::handleAdminRules);
         server.createContext("/admin/rules/add", this::handleAddRule);
@@ -298,6 +302,17 @@ public class WebInterfaceServer {
         ex.sendResponseHeaders(200, data.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(data);
+        }
+    }
+
+    private void servePage(HttpExchange ex, String file) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        try (InputStream is = WebInterfaceServer.class.getClassLoader().getResourceAsStream("webpanel/" + file)) {
+            if (is == null) { ex.sendResponseHeaders(404, -1); return; }
+            byte[] data = is.readAllBytes();
+            ex.getResponseHeaders().add("Content-Type", "text/html");
+            ex.sendResponseHeaders(200, data.length);
+            try (OutputStream os = ex.getResponseBody()) { os.write(data); }
         }
     }
 
