@@ -89,7 +89,7 @@ public class OpenCore extends JavaPlugin {
         messageService = new MessageService(this);
 
         reputationService = new ReputationService(this, database);
-        chatFlagService = new ChatReputationFlagService(this, database);
+        chatFlagService = new ChatReputationFlagService(this);
 
         configService = new ConfigService(this, database);
         getLogger().info("Config parameters must be registered via the web interface.");

@@ -1,0 +1,35 @@
+TOXICITY:
+  description: "Beleidigende, toxische oder eskalierende Wortwahl"
+  min_change: -3
+  max_change: -7
+  active: true
+
+SPAM:
+  description: "Wiederholende, inhaltslose oder störende Nachrichten"
+  min_change: -2
+  max_change: -4
+  active: true
+
+HELPFUL:
+  description: "Hilfreiche oder konstruktive Antworten im Chat"
+  min_change: 2
+  max_change: 5
+  active: true
+
+HATE_SPEECH:
+  description: "Rassistische, sexistische oder diskriminierende Sprache"
+  min_change: -5
+  max_change: -10
+  active: true
+
+FRIENDLY_TONE:
+  description: "Freundliche, respektvolle oder deeskalierende Sprache"
+  min_change: 1
+  max_change: 3
+  active: true
+
+MANIPULATION:
+  description: "Gespräche die offensichtlich zur Manipulation der Reputation dienen"
+  min_change: -1
+  max_change: -5
+  active: true

@@ -1,177 +1,137 @@
 package com.illusioncis7.opencore.reputation;
 
-import com.illusioncis7.opencore.database.Database;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.sql.Timestamp;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 
 /**
- * Service providing access to reputation flags used for chat analysis.
+ * Loads reputation flags for chat analysis from <code>chat_flags.yml</code>.
  */
 public class ChatReputationFlagService {
     private final JavaPlugin plugin;
-    private final Database database;
     private final Logger logger;
+    private final File configFile;
 
-    public ChatReputationFlagService(JavaPlugin plugin, Database database) {
+    private final Map<String, ReputationFlag> allFlags = new HashMap<>();
+    private final Map<String, ReputationFlag> activeFlags = new HashMap<>();
+
+    public ChatReputationFlagService(JavaPlugin plugin) {
         this.plugin = plugin;
-        this.database = database;
         this.logger = plugin.getLogger();
-        initTable();
+        this.configFile = new File(plugin.getDataFolder(), "chat_flags.yml");
+        reload();
     }
 
-    private void initTable() {
-        if (!database.isConnected()) return;
-        String sql;
-        if (database.isSQLite()) {
-            sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "code TEXT NOT NULL," +
-                    "description TEXT," +
-                    "min_change INT NOT NULL," +
-                    "max_change INT NOT NULL," +
-                    "active BOOLEAN DEFAULT 1," +
-                    "last_updated TIMESTAMP NOT NULL" +
-                    ")";
-        } else {
-            sql = "CREATE TABLE IF NOT EXISTS chat_reputation_flags (" +
-                    "id INT AUTO_INCREMENT PRIMARY KEY," +
-                    "code VARCHAR(50) NOT NULL," +
-                    "description TEXT," +
-                    "min_change INT NOT NULL," +
-                    "max_change INT NOT NULL," +
-                    "active BOOLEAN DEFAULT 1," +
-                    "last_updated TIMESTAMP NOT NULL" +
-                    ")";
+    /**
+     * Reload flags from disk. Invalid entries are ignored and logged.
+     */
+    public synchronized void reload() {
+        if (!configFile.exists()) {
+            plugin.saveResource("chat_flags.yml", false);
         }
-        try (Connection conn = database.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(sql);
-        } catch (Exception e) {
-            logger.severe("Failed to create chat_reputation_flags: " + e.getMessage());
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
+        allFlags.clear();
+        activeFlags.clear();
+        for (String key : cfg.getKeys(false)) {
+            ConfigurationSection sec = cfg.getConfigurationSection(key);
+            if (sec == null) {
+                logger.warning("Invalid flag entry: " + key);
+                continue;
+            }
+            boolean active = sec.getBoolean("active", true);
+            String desc = sec.getString("description", "");
+            if (!sec.isInt("min_change") || !sec.isInt("max_change")) {
+                logger.warning("Flag " + key + " has no valid min/max values");
+                continue;
+            }
+            int min = sec.getInt("min_change");
+            int max = sec.getInt("max_change");
+            ReputationFlag f = new ReputationFlag(key, desc, min, max, active);
+            allFlags.put(key, f);
+            if (active) {
+                activeFlags.put(key, f);
+            }
         }
     }
 
-    /** Retrieve all flags. */
+    /**
+     * List all flags defined in the configuration.
+     */
     public List<ReputationFlag> listFlags() {
-        return loadFlags(false);
+        return new ArrayList<>(allFlags.values());
     }
 
-    /** Retrieve only active flags. */
+    /**
+     * @return list of active flags only.
+     */
     public List<ReputationFlag> getActiveFlags() {
-        return loadFlags(true);
+        return new ArrayList<>(activeFlags.values());
     }
 
-    private List<ReputationFlag> loadFlags(boolean activeOnly) {
-        List<ReputationFlag> list = new ArrayList<>();
-        if (!database.isConnected()) return list;
-        String sql = "SELECT code, description, min_change, max_change, active FROM chat_reputation_flags";
-        if (activeOnly) {
-            sql += " WHERE active = 1";
-        }
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                String code = rs.getString(1);
-                String desc = rs.getString(2);
-                int min = rs.getInt(3);
-                int max = rs.getInt(4);
-                boolean act = rs.getBoolean(5);
-                list.add(new ReputationFlag(code, desc, min, max, act));
-            }
-        } catch (Exception e) {
-            logger.warning("Failed to load reputation flags: " + e.getMessage());
-        }
-        return list;
-    }
-
-    /** Find a flag by code. */
-    public Optional<ReputationFlag> getFlagByCode(String code) {
-        if (!database.isConnected()) return Optional.empty();
-        String sql = "SELECT code, description, min_change, max_change, active FROM chat_reputation_flags WHERE code = ?";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, code);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(new ReputationFlag(
-                            rs.getString(1), rs.getString(2), rs.getInt(3), rs.getInt(4), rs.getBoolean(5)));
-                }
-            }
-        } catch (Exception e) {
-            logger.warning("Failed to load reputation flag: " + e.getMessage());
-        }
-        return Optional.empty();
-    }
-
-    /** Map of active flags by code. */
+    /**
+     * @return map of active flags keyed by code.
+     */
     public Map<String, ReputationFlag> getFlagMap() {
-        Map<String, ReputationFlag> map = new HashMap<>();
-        for (ReputationFlag f : getActiveFlags()) {
-            map.put(f.code, f);
-        }
-        return map;
+        return new HashMap<>(activeFlags);
     }
 
-    /** Update min/max values for a flag. */
-    public boolean setRange(String code, int min, int max) {
-        if (!database.isConnected()) return false;
-        String sql = "UPDATE chat_reputation_flags SET min_change = ?, max_change = ?, last_updated = ? WHERE code = ?";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, min);
-            ps.setInt(2, max);
-            ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
-            ps.setString(4, code);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            logger.warning("Failed to update reputation flag: " + e.getMessage());
-        }
-        return false;
+    /**
+     * Update the min/max range for a flag and persist the file.
+     */
+    public synchronized boolean setRange(String code, int min, int max) {
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
+        ConfigurationSection sec = cfg.getConfigurationSection(code);
+        if (sec == null) return false;
+        sec.set("min_change", min);
+        sec.set("max_change", max);
+        return save(cfg);
     }
 
-    /** Create a new flag. */
-    public boolean createFlag(String code, String desc, int min, int max, boolean active) {
-        if (!database.isConnected()) return false;
-        String sql = "INSERT INTO chat_reputation_flags (code, description, min_change, max_change, active, last_updated) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, code);
-            ps.setString(2, desc);
-            ps.setInt(3, min);
-            ps.setInt(4, max);
-            ps.setBoolean(5, active);
-            ps.setTimestamp(6, new Timestamp(System.currentTimeMillis()));
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            logger.warning("Failed to create reputation flag: " + e.getMessage());
-        }
-        return false;
+    /**
+     * Update all fields of a flag and persist the file.
+     */
+    public synchronized boolean updateFlag(String code, String desc, int min, int max, boolean active) {
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
+        ConfigurationSection sec = cfg.getConfigurationSection(code);
+        if (sec == null) return false;
+        sec.set("description", desc);
+        sec.set("min_change", min);
+        sec.set("max_change", max);
+        sec.set("active", active);
+        boolean ok = save(cfg);
+        if (ok) reload();
+        return ok;
     }
 
-    /** Update full flag record. */
-    public boolean updateFlag(String code, String desc, int min, int max, boolean active) {
-        if (!database.isConnected()) return false;
-        String sql = "UPDATE chat_reputation_flags SET description = ?, min_change = ?, max_change = ?, active = ?, last_updated = ? WHERE code = ?";
-        try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, desc);
-            ps.setInt(2, min);
-            ps.setInt(3, max);
-            ps.setBoolean(4, active);
-            ps.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
-            ps.setString(6, code);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            logger.warning("Failed to update reputation flag: " + e.getMessage());
+    /**
+     * Add a new flag and persist the file.
+     */
+    public synchronized boolean createFlag(String code, String desc, int min, int max, boolean active) {
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
+        if (cfg.isConfigurationSection(code)) return false;
+        ConfigurationSection sec = cfg.createSection(code);
+        sec.set("description", desc);
+        sec.set("min_change", min);
+        sec.set("max_change", max);
+        sec.set("active", active);
+        boolean ok = save(cfg);
+        if (ok) reload();
+        return ok;
+    }
+
+    private boolean save(FileConfiguration cfg) {
+        try {
+            cfg.save(configFile);
+            return true;
+        } catch (IOException e) {
+            logger.warning("Failed to save chat_flags.yml: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 }
