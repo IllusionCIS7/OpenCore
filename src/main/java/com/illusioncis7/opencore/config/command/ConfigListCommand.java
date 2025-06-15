@@ -25,10 +25,6 @@ public class ConfigListCommand implements TabExecutor {
             OpenCore.getInstance().getMessageService().send(sender, "no_permission", null);
             return true;
         }
-        if (!OpenCore.getInstance().isConfigGrabberEnabled()) {
-            OpenCore.getInstance().getMessageService().send(sender, "module_disabled", null);
-            return true;
-        }
         List<ConfigParameter> list = configService.listParameters();
         if (list.isEmpty()) {
             OpenCore.getInstance().getMessageService().send(sender, "configlist.none", null);
@@ -38,10 +34,9 @@ public class ConfigListCommand implements TabExecutor {
             String value = p.getCurrentValue() != null ? p.getCurrentValue() : "null";
             java.util.Map<String, String> ph = new HashMap<>();
             ph.put("id", String.valueOf(p.getId()));
-            ph.put("param", p.getParameterPath());
+            ph.put("param", p.getYamlPath());
             ph.put("value", value);
-            ph.put("editable", String.valueOf(p.isEditable()));
-            ph.put("impact", String.valueOf(p.getImpactRating()));
+            ph.put("editable", String.valueOf(p.isEditableByPlayers()));
             OpenCore.getInstance().getMessageService().send(sender, "configlist.entry", ph);
         }
         return true;

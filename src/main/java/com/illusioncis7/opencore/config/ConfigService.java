@@ -151,6 +151,29 @@ public class ConfigService {
         }
     }
 
+    /** Register a parameter manually via the web interface. */
+    public boolean registerParameter(String configFilePath, String yamlPath, boolean editable, String description,
+                                     String currentValue, Integer minValue, Integer maxValue) {
+        if (!database.isConnected()) return false;
+        String sql = "INSERT INTO config_params (path, parameter_path, editable, description, current_value, min_value, max_value) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, configFilePath);
+            ps.setString(2, yamlPath);
+            ps.setBoolean(3, editable);
+            ps.setString(4, description);
+            if (currentValue != null) ps.setString(5, currentValue); else ps.setNull(5, Types.VARCHAR);
+            if (minValue != null) ps.setInt(6, minValue); else ps.setNull(6, Types.INTEGER);
+            if (maxValue != null) ps.setInt(7, maxValue); else ps.setNull(7, Types.INTEGER);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to register parameter: " + e.getMessage());
+            return false;
+        }
+    }
+
     /**
      * Update a configuration parameter by ID with a new value.
      */
