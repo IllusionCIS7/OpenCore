@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: OpenCore Flags API
+  version: '1.0.0'
+paths:
+  /flags:
+    get:
+      summary: List active chat reputation flags
+      responses:
+        '200':
+          description: Active flags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                        description:
+                          type: string
+                        min_change:
+                          type: integer
+                        max_change:
+                          type: integer
