@@ -109,7 +109,7 @@ public class GptService {
      * Placeholders of the form %key% are replaced with the provided values.
      */
     public String buildPrompt(String module, Map<String, String> values) {
-        String policy = policyService.getOrDefault(module);
+        String policy = policyService.getPolicy(module);
         if (policy == null) {
             return null;
         }

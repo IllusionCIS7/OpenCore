@@ -96,12 +96,9 @@ public class OpenCore extends JavaPlugin {
 
         ruleService = new RuleService(this, database);
 
-        policyService = new PolicyService(this, database);
+        policyService = new PolicyService(this);
 
         setupManager = new com.illusioncis7.opencore.setup.SetupManager(this, ruleService, configService);
-        if (setupManager.isSetupActive()) {
-            policyService.ensureDefaults();
-        }
 
         gptService = new GptService(this, database, policyService);
         gptService.init();
@@ -258,6 +255,13 @@ public class OpenCore extends JavaPlugin {
 
     public MessageService getMessageService() {
         return messageService;
+    }
+
+    /** Reload policy files from disk. */
+    public void reloadPolicies() {
+        if (policyService != null) {
+            policyService.reload();
+        }
     }
 
     public com.illusioncis7.opencore.command.OpenCoreCommand getCoreCommand() {
