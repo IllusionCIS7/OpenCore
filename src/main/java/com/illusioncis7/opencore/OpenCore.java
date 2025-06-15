@@ -48,6 +48,8 @@ public class OpenCore extends JavaPlugin {
     private PlanHook planHook;
     private MessageService messageService;
     private WebTokenService webTokenService;
+    private com.illusioncis7.opencore.web.SuggestionCommentService commentService;
+    private com.illusioncis7.opencore.web.WebInterfaceServer webInterfaceServer;
     private com.illusioncis7.opencore.command.OpenCoreCommand coreCommand;
     private com.illusioncis7.opencore.api.ApiServer apiServer;
     private com.illusioncis7.opencore.setup.SetupManager setupManager;
@@ -75,6 +77,8 @@ public class OpenCore extends JavaPlugin {
         saveResource("messages.yml", false);
         saveResource("opencore.yml", false);
         saveResource("webpanel/index.html", false);
+        saveResource("webpanel/suggest.html", false);
+        saveResource("webpanel/vote.html", false);
         saveResource("modules.yml", false);
 
         org.bukkit.configuration.file.FileConfiguration modCfg =
@@ -120,6 +124,12 @@ public class OpenCore extends JavaPlugin {
         votingService = new VotingService(this, database, gptService, configService, ruleService, reputationService, planHook);
 
         webTokenService = new WebTokenService(this, database);
+        commentService = new com.illusioncis7.opencore.web.SuggestionCommentService(this, database);
+        try {
+            webInterfaceServer = new com.illusioncis7.opencore.web.WebInterfaceServer(webTokenService, votingService, commentService, getLogger());
+        } catch (Exception e) {
+            getLogger().warning("Failed to start web interface: " + e.getMessage());
+        }
 
         SuggestCommand suggestCmd = new SuggestCommand(votingService);
 
@@ -230,6 +240,9 @@ public class OpenCore extends JavaPlugin {
         }
         if (apiServer != null) {
             apiServer.stop();
+        }
+        if (webInterfaceServer != null) {
+            webInterfaceServer.stop();
         }
     }
 

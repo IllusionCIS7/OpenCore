@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Vote</title></head>
+<body>
+<h2>Abstimmungen</h2>
+<div id="list">Lade...</div>
+<script>
+const token=new URLSearchParams(location.search).get('token');
+async function load(){
+ const r=await fetch('/suggestions?token='+encodeURIComponent(token));
+ const j=await r.json();
+ const div=document.getElementById('list');
+ div.innerHTML='';
+ j.suggestions.forEach(s=>{
+   const d=document.createElement('div');
+   d.innerHTML='<h3>'+s.text+'</h3><p>'+(s.description||'')+'</p>'+
+     '<p>Stimmen: '+s.yes+'/'+s.no+' (benötigt '+s.required+')</p>'+
+     (s.expired?'<b>Verfallen</b><br/>':'')+
+     '<button onclick="vote('+s.id+',true)">Ja</button> '+
+     '<button onclick="vote('+s.id+',false)">Nein</button>';
+   div.appendChild(d);
+ });
+}
+async function vote(id,yes){
+ await fetch('/cast-vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,suggestion:id,vote:yes?'yes':'no'})});
+ load();
+}
+load();
+</script>
+</body></html>

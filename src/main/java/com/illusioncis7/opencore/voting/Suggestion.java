@@ -12,9 +12,10 @@ public class Suggestion {
     public final String text;
     public final Instant created;
     public final boolean open;
+    public final boolean expired;
 
     public Suggestion(int id, UUID playerUuid, int parameterId, String newValue, String description, String text,
-                      Instant created, boolean open) {
+                      Instant created, boolean open, boolean expired) {
         this.id = id;
         this.playerUuid = playerUuid;
         this.parameterId = parameterId;
@@ -23,5 +24,6 @@ public class Suggestion {
         this.text = text;
         this.created = created;
         this.open = open;
+        this.expired = expired;
     }
 }

@@ -160,12 +160,26 @@ public class Database {
                     "text TEXT," +
                     "created TIMESTAMP NOT NULL," +
                     "open BOOLEAN DEFAULT 1," +
+                    "expired BOOLEAN DEFAULT 0," +
                     "suggestion_type ENUM('CONFIG_CHANGE','RULE_CHANGE','MODERATION_REQUEST','FEATURE_REQUEST','BUG_REPORT','EVENT_PROPOSAL','OTHER')," +
                     "gpt_reasoning TEXT," +
                     "gpt_confidence FLOAT," +
                     "classified_at TIMESTAMP" +
                     ")";
             stmt.executeUpdate(suggestionSql);
+
+            String commentSql = "CREATE TABLE IF NOT EXISTS suggestion_comments (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "suggestion_id INT NOT NULL," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "content TEXT NOT NULL," +
+                    "timestamp TIMESTAMP NOT NULL" +
+                    ")";
+            stmt.executeUpdate(commentSql);
+
+            try { stmt.executeUpdate("ALTER TABLE suggestions ADD COLUMN expired BOOLEAN DEFAULT 0"); } catch (SQLException ignore) {}
+
+            try { stmt.executeUpdate("ALTER TABLE suggestions ADD COLUMN expired BOOLEAN DEFAULT 0"); } catch (SQLException ignore) {}
 
             String voteSql = "CREATE TABLE IF NOT EXISTS votes (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
@@ -319,12 +333,22 @@ public class Database {
                     "text TEXT," +
                     "created TIMESTAMP NOT NULL," +
                     "open BOOLEAN DEFAULT 1," +
+                    "expired BOOLEAN DEFAULT 0," +
                     "suggestion_type TEXT," +
                     "gpt_reasoning TEXT," +
                     "gpt_confidence FLOAT," +
                     "classified_at TIMESTAMP" +
                     ")";
             stmt.executeUpdate(suggestionSql);
+
+            String commentSql = "CREATE TABLE IF NOT EXISTS suggestion_comments (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "suggestion_id INT NOT NULL," +
+                    "player_uuid TEXT NOT NULL," +
+                    "content TEXT NOT NULL," +
+                    "timestamp TIMESTAMP NOT NULL" +
+                    ")";
+            stmt.executeUpdate(commentSql);
 
             String voteSql = "CREATE TABLE IF NOT EXISTS votes (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
