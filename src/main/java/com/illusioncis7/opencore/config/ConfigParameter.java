@@ -47,6 +47,22 @@ public class ConfigParameter {
         this.parameterPath = parameterPath;
     }
 
+    /**
+     * Convenience accessor used by the API layer. Returns the YAML
+     * path of this parameter as stored in the database.
+     */
+    public String getYamlPath() {
+        return parameterPath;
+    }
+
+    /**
+     * Indicates whether this parameter may be changed by players
+     * via the web panel or ingame commands.
+     */
+    public boolean isEditableByPlayers() {
+        return editable;
+    }
+
     public int getMinValue() {
         return minValue;
     }
