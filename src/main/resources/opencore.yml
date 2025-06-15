@@ -1,0 +1,6 @@
+web_interface:
+  internal_host: 127.0.0.1
+  internal_port: 8081
+  public_url: "https://web.freibau-smp.de"
+  vote_ping_interval_minutes: 60
+  token_validity_minutes: 30
