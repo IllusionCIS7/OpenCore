@@ -56,6 +56,7 @@ public class WebInterfaceServer {
 
     private void registerContexts() {
         server.createContext("/validate-token", this::handleValidateToken);
+        server.createContext("/check-token", this::handleCheckToken);
         server.createContext("/suggestions", this::handleSuggestions);
         server.createContext("/submit-suggestion", this::handleSubmitSuggestion);
         server.createContext("/cast-vote", this::handleCastVote);
@@ -87,6 +88,23 @@ public class WebInterfaceServer {
         String token = req.optString("token", null);
         String type = req.optString("type", null);
         UUID player = tokenService.validateToken(token, type);
+        JSONObject resp = new JSONObject();
+        resp.put("valid", player != null);
+        if (player != null) {
+            resp.put("player", player.toString());
+            String name = Bukkit.getOfflinePlayer(player).getName();
+            if (name != null) resp.put("name", name);
+            resp.put("reputation", reputationService.getReputation(player));
+        }
+        writeJson(ex, resp);
+    }
+
+    private void handleCheckToken(HttpExchange ex) throws IOException {
+        if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) { ex.sendResponseHeaders(405, -1); return; }
+        JSONObject req = readJson(ex);
+        String token = req.optString("token", null);
+        String type = req.optString("type", null);
+        UUID player = tokenService.checkToken(token, type);
         JSONObject resp = new JSONObject();
         resp.put("valid", player != null);
         if (player != null) {
