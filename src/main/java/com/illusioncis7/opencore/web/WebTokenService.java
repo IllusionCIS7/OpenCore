@@ -123,18 +123,26 @@ public class WebTokenService {
 
     /** Check token without updating its used flag. */
     public UUID checkToken(String token) {
+        return checkToken(token, null);
+    }
+
+    /**
+     * Check token and optionally verify its type without marking it as used.
+     */
+    public UUID checkToken(String token, String type) {
         if (token == null) return null;
         cleanupExpiredTokens();
         if (!database.isConnected()) return null;
-        String sql = "SELECT player_uuid, expires_at FROM web_access_tokens WHERE token = ?";
+        String sql = "SELECT player_uuid, type, expires_at FROM web_access_tokens WHERE token = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, token);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
+                    String t = rs.getString("type");
                     Timestamp exp = rs.getTimestamp("expires_at");
-                    if (exp.toInstant().isAfter(Instant.now())) {
-                        return UUID.fromString(rs.getString(1));
+                    if ((type == null || type.equals(t)) && exp.toInstant().isAfter(Instant.now())) {
+                        return UUID.fromString(rs.getString("player_uuid"));
                     }
                 }
             }
