@@ -30,7 +30,7 @@ public class HeuristicPreprocessor {
      * Updates the underlying chat_log table if replacements are made.
      */
     public List<ChatAnalyzerTask.ChatMessage> preprocess(List<ChatAnalyzerTask.ChatMessage> chatLog) {
-        Map<String, String> map = loadAliasMap();
+        Map<String, String> map = buildAliasMap(chatLog);
         List<ChatAnalyzerTask.ChatMessage> result = new ArrayList<>();
         for (ChatAnalyzerTask.ChatMessage msg : chatLog) {
             String newText = replaceAliases(msg.message, map);
@@ -43,28 +43,66 @@ public class HeuristicPreprocessor {
         return result;
     }
 
-    private Map<String, String> loadAliasMap() {
-        Map<String, String> map = new HashMap<>();
-        if (!database.isConnected()) {
-            return map;
+    private Map<String, String> buildAliasMap(List<ChatAnalyzerTask.ChatMessage> chatLog) {
+        Map<UUID, String> playerAliases = new HashMap<>();
+
+        // gather alias IDs for all players in the provided messages
+        for (ChatAnalyzerTask.ChatMessage msg : chatLog) {
+            if (msg.aliasId != null && !msg.aliasId.isEmpty()) {
+                playerAliases.put(msg.uuid, msg.aliasId);
+            }
         }
-        String sql = "SELECT uuid, alias_id FROM player_registry";
+
+        // fetch aliases from DB if missing
+        if (database.isConnected()) {
+            for (ChatAnalyzerTask.ChatMessage msg : chatLog) {
+                if (!playerAliases.containsKey(msg.uuid)) {
+                    String alias = fetchAlias(msg.uuid);
+                    if (alias != null) {
+                        playerAliases.put(msg.uuid, alias);
+                    }
+                }
+            }
+        }
+
+        Map<String, String> map = new HashMap<>();
+        for (Map.Entry<UUID, String> entry : playerAliases.entrySet()) {
+            UUID uuid = entry.getKey();
+            String alias = entry.getValue();
+            if (alias == null) continue;
+            String id = alias.trim();
+            map.put(id.toLowerCase(Locale.ROOT), id);
+
+            OfflinePlayer off = Bukkit.getOfflinePlayer(uuid);
+            if (off.getName() != null) {
+                String name = off.getName().toLowerCase(Locale.ROOT);
+                map.put(name, id);
+
+                // simple variation: remove trailing digits and underscores
+                String variant = name.replaceAll("[_0-9]+$", "");
+                if (!variant.equals(name) && !variant.isEmpty()) {
+                    map.put(variant, id);
+                }
+            }
+        }
+        return map;
+    }
+
+    private String fetchAlias(UUID uuid) {
+        if (!database.isConnected()) return null;
+        String sql = "SELECT alias_id FROM player_registry WHERE uuid = ?";
         try (Connection conn = database.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                UUID uuid = UUID.fromString(rs.getString(1));
-                String alias = rs.getString(2);
-                map.put(alias.toLowerCase(Locale.ROOT), alias);
-                OfflinePlayer off = Bukkit.getOfflinePlayer(uuid);
-                if (off.getName() != null) {
-                    map.put(off.getName().toLowerCase(Locale.ROOT), alias);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uuid.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
                 }
             }
         } catch (Exception e) {
-            logger.warning("Failed to load alias map: " + e.getMessage());
+            logger.warning("Failed to fetch alias: " + e.getMessage());
         }
-        return map;
+        return null;
     }
 
     private String replaceAliases(String text, Map<String, String> aliases) {
