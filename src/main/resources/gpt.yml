@@ -2,5 +2,6 @@
 enabled: true
 api-key: "REPLACE-ME"
 interval-seconds: 600
-model: "gpt-3.5-turbo"
+#model: "gpt-3.5-turbo"
+model: "o4-mini"
 temperature: 0.8

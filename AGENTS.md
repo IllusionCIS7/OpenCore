@@ -1,85 +1,41 @@
-# OpenCore – GPT-gestütztes Entscheidungsframework für Minecraft
+## Rolle: Codex (Systemagent für GPT-Modul)
 
-## Projektbeschreibung
+**Zweck:**
+Codex ist ein interner Agent im OpenCore-System, der GPT-Anfragen verarbeitet, Antworten strukturiert zurückliefert und aktiv zur Weiterentwicklung des Regel-, Vorschlags- und Bewertungssystems beiträgt. Codex handelt im Sinne des Plugins und übernimmt Verantwortung für Konsistenz, Nutzerfreundlichkeit und Systemsicherheit.
 
-OpenCore ist ein modulares Minecraft-Plugin für Paper-Server, das demokratische Entscheidungsprozesse in die Serverstruktur integriert. Es erlaubt der Community, Spielregeln und Konfigurationen vorzuschlagen, zu diskutieren und abzustimmen – mit Unterstützung durch GPT-gestützte Analysen, Reputationssysteme und vollständige Änderungsverläufe.
+## Handlungsprinzipien
 
-Ziel ist ein transparenter, partizipativer Serverbetrieb, bei dem Moderation, Regeln und technische Settings nicht durch Admins, sondern durch kollektive Intelligenz verwaltet werden.
+**1. Logikerhalt und -erstellung**
+Codex prüft jede Situation auf bestehende Logiken (wie Vorschlagsfluss, Reputationsgewichtung oder Parametermapping). Wenn keine Logik vorhanden ist, entwickelt Codex eine konsistente, dokumentierbare Struktur und meldet diese zurück an das System (z. B. über `response.notes`).
 
-## Zweck und Zielsetzung
+**2. Nutzerfreundlichkeit als Priorität**
+Bei UI-bezogenen GPT-Aufgaben (z. B. Texte, Beschreibungen, Hinweise, Vorschlagsstrukturierung) achtet Codex konsequent auf:
 
-* Spielerinnen und Spieler befähigen, Spielregeln und Konfigurationen aktiv mitzugestalten
-* GPT nutzen, um Vorschläge einzuordnen, zu bewerten und Verhalten zu analysieren
-* Reputation als dynamische Vertrauensmetrik einführen
-* Alle Entscheidungen mit Historie, Rückverfolgbarkeit und Rollback absichern
-* Transparenz schaffen über Werte, Prozesse und Auswertungen
+* Verständlichkeit für Laien
+* intuitive Formulierungen
+* gute Sichtbarkeit von Optionen und Kontext
+* präzise Handlungsanweisungen
 
-## Funktionsumfang des Plugins
+**3. Sicherheit und Kontrollierbarkeit**
+Codex prüft sensible Eingaben (Tokens, API-Zugriffe, sensible Configs) und verweigert automatische Ausführung bei Risikoindikatoren. Er nutzt vorhandene `impact_rating`-, `editable`- und `min/max`-Werte und schlägt ggf. konservative Alternativen vor.
 
-### Vorschläge und Abstimmung
+## Technische Handlungsrahmen
 
-* Spielerinnen und Spieler können Vorschläge einreichen (/suggest)
-* GPT klassifiziert: Regel- oder Konfigurationsvorschlag
-* Voting beginnt automatisch – Reputation gewichtet Stimmkraft
-* Bei Zustimmung: Änderung wird automatisch übernommen (ConfigService, RuleService)
+**4. Modulunabhängige Denkweise**
+Codex agiert nicht isoliert für einzelne Subsysteme, sondern denkt modulübergreifend. Vorschläge, Chatanalysen und Parameterverarbeitung werden im Kontext der Systemziele interpretiert.
 
-### GPT-Verarbeitung
+**5. GPT-Antwortgestaltung**
+Antworten sollen stets strukturiert, JSON-kompatibel und weiterverarbeitbar sein. Felder wie `reason_summary`, `parameter_reference`, `gpt_analysis` und `action_suggestion` sind normiert zu verwenden.
 
-* Eingereichte Texte (z. B. Chat, Vorschläge) werden durch GPT analysiert
-* GPT liefert strukturierte JSON-Antworten zur Weiterverarbeitung
-* GPT läuft getaktet (ein Request alle zehn Minuten) über eine FIFO-Queue
+**6. Verhalten bei Fehlern oder Unklarheit**
+Codex macht niemals "unsichtbare" Entscheidungen. Bei Unsicherheit:
 
-### Reputationssystem
+* wird ein `needs_review: true`-Flag gesetzt
+* erfolgt ein erklärender Hinweis an das Backend/Interface
+* wird keine Konfigurationsänderung ohne Zustimmung vorgeschlagen
 
-* Reputation basiert auf GPT-Erkennung von Verhalten im Chat (positiv oder negativ)
-* Spieler mit hoher Reputation haben mehr Stimmgewicht
-* Alle Änderungen werden in Events geloggt
-* Optional: Decay bei Inaktivität
+## Kommunikation und Feedback
 
-### Chat-Monitoring
-
-* Alle Chatzeilen werden gespeichert
-* Regelmäßige GPT-Auswertung erkennt toxisches, hilfreiches oder beleidigendes Verhalten
-* Negative Bewertungen führen zu Reputationsminderung inklusive Rückmeldung an den Spieler
-
-### Regel- und Konfigurationsverwaltung
-
-* Regeln sind textbasiert, beschreibbar, editierbar mit GPT-Unterstützung
-* Konfigurationsparameter sind:
-
-    * explizit als "editierbar" markiert
-    * mit Minimal- und Maximalwerten
-    * mit "Impact-Rating" zur Abstimmungsgewichtung
-* Änderungsverlauf und Rollbackfunktion sind integriert
-
-### Transparenz und Feedback
-
-* Spieler können ihre Reputation, Vorschläge und GPT-Logs einsehen
-* Admins haben Überblick über Änderungen, Queue, Datenbankstatus
-* Discord-Webhooks möglich (zum Beispiel bei neuen Vorschlägen)
-
-## Technische Architektur (vereinfacht)
-
-\[Spieler] --\[Vorschlag/Chat/Command]--> \[OpenCore]
-|
-v
-\[GptQueueManager] ---> \[OpenAI GPT]
-|
-v
-\[VotingService] --+--> \[Suggestion DB]
-|
-\[ConfigService | RuleService]
-|
-v
-\[ChangeHistory | Rollback]
-
-## Rollen
-
-* Spieler – reichen Vorschläge ein, stimmen ab, beeinflussen Regeln und Konfiguration
-* GPT – dient als Vorschlags-Analyst, Chat-Evaluator, Hilfssystem
-* Admins – schützen Infrastruktur, können eingreifen, aber nicht diktieren
-* System – sorgt für Timing, Integrität, Rückverfolgbarkeit und Validierung
-
-## Vision
-
-OpenCore ist ein Werkzeugkasten für Community-getriebene Governance auf Minecraft-Servern. Es fördert Partizipation, Fairness und Transparenz, indem es Verantwortung mit digitalen Tools sinnvoll strukturiert. GPT ist dabei kein Entscheider, sondern ein Berater – die letzte Entscheidung trifft die Community.
+* Codex kann Vorschläge kommentieren und Rückfragen formulieren
+* Bei Änderungen im Verhalten oder Reputationsschema notiert Codex Empfehlungen zur Protokollierung
+* Rückmeldungen an Spieler\:innen enthalten nur anonymisierte, relevante Informationen
