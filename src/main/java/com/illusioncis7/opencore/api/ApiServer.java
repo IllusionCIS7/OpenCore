@@ -71,6 +71,7 @@ public class ApiServer {
         server.createContext("/setup/rules", this::handleRulesGet);
         server.createContext("/setup/rules/add", this::handleAddRule);
         server.createContext("/setup/configs", this::handleConfigsGet);
+        server.createContext("/setup/configs/add", this::handleAddConfig);
         server.createContext("/setup/configs/update", this::handleUpdateConfig);
         server.createContext("/setup/complete", this::handleComplete);
         server.createContext("/setup/chatflags", this::handleFlagsGet);
@@ -193,13 +194,11 @@ public class ApiServer {
         for (ConfigParameter p : configService.listParameters()) {
             JSONObject o = new JSONObject();
             o.put("id", p.getId());
-            o.put("name", p.getParameterPath());
-            o.put("type", p.getValueType().name());
+            o.put("name", p.getYamlPath());
             o.put("value", p.getCurrentValue());
-            o.put("editable", p.isEditable());
+            o.put("editable", p.isEditableByPlayers());
             o.put("min", p.getMinValue());
             o.put("max", p.getMaxValue());
-            o.put("impact", p.getImpactRating());
             arr.put(o);
         }
         writeJson(ex, new JSONObject().put("parameters", arr));
@@ -212,6 +211,21 @@ public class ApiServer {
         String value = req.optString("value", null);
         if (id <= 0 || value == null) { ex.sendResponseHeaders(400, -1); return; }
         boolean ok = configService.updateParameter(id, value, null);
+        writeJson(ex, new JSONObject().put("success", ok));
+    }
+
+    private void handleAddConfig(HttpExchange ex) throws IOException {
+        if (!allowSetup(ex, true)) return;
+        JSONObject req = readJson(ex);
+        String file = req.optString("config_file_path", null);
+        String path = req.optString("yaml_path", null);
+        if (file == null || path == null) { ex.sendResponseHeaders(400, -1); return; }
+        boolean editable = req.optBoolean("editable_by_players", false);
+        String desc = req.optString("description", "");
+        String current = req.optString("current_value", null);
+        Integer min = req.has("min_value") ? req.optInt("min_value") : null;
+        Integer max = req.has("max_value") ? req.optInt("max_value") : null;
+        boolean ok = configService.registerParameter(file, path, editable, desc, current, min, max);
         writeJson(ex, new JSONObject().put("success", ok));
     }
 

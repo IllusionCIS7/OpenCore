@@ -92,11 +92,7 @@ public class OpenCore extends JavaPlugin {
         chatFlagService = new ChatReputationFlagService(this, database);
 
         configService = new ConfigService(this, database);
-        if (moduleConfigGrabber) {
-            configService.scanAndStore(new File(".").getAbsoluteFile());
-        } else {
-            getLogger().info("ConfigGrabber disabled via modules.yml");
-        }
+        getLogger().info("Config parameters must be registered via the web interface.");
 
         ruleService = new RuleService(this, database);
 
