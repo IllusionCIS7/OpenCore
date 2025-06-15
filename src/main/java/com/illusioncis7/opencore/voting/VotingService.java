@@ -154,6 +154,19 @@ public class VotingService {
         return id;
     }
 
+    /** Submit a suggestion with pre-defined parameter and value without GPT mapping. */
+    public int submitDirectSuggestion(UUID player, int parameterId, String value, String reason) {
+        if (!isEditableParam(parameterId)) {
+            return -1;
+        }
+        int id = insertBaseSuggestion(player, reason);
+        if (id == -1) return -1;
+        updateMapping(id, parameterId, value);
+        markOpen(id);
+        broadcastStart(id);
+        return id;
+    }
+
     private int insertBaseSuggestion(UUID player, String text) {
         if (!database.isConnected()) return -1;
         String sql = "INSERT INTO suggestions (player_uuid, parameter_id, new_value, text, created, open) VALUES (?, ?, ?, ?, ?, 0)";
@@ -317,7 +330,7 @@ public class VotingService {
     public List<Suggestion> getOpenSuggestions() {
         List<Suggestion> list = new ArrayList<>();
         if (!database.isConnected()) return list;
-        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, s.expired, " +
                 "COALESCE(c.description, r.rule_text) " +
                 "FROM suggestions s " +
                 "LEFT JOIN config_params c ON s.parameter_id = c.id " +
@@ -334,8 +347,9 @@ public class VotingService {
                 String t = rs.getString(5);
                 Instant created = rs.getTimestamp(6).toInstant();
                 boolean open = rs.getBoolean(7);
-                String desc = rs.getString(8);
-                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open));
+                boolean expired = rs.getBoolean(8);
+                String desc = rs.getString(9);
+                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open, expired));
             }
         } catch (SQLException e) {
             logger.severe("Failed to fetch suggestions: " + e.getMessage());
@@ -363,7 +377,7 @@ public class VotingService {
     public List<Suggestion> getClosedSuggestions() {
         List<Suggestion> list = new ArrayList<>();
         if (!database.isConnected()) return list;
-        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, s.expired, " +
                 "COALESCE(c.description, r.rule_text) " +
                 "FROM suggestions s " +
                 "LEFT JOIN config_params c ON s.parameter_id = c.id " +
@@ -380,8 +394,9 @@ public class VotingService {
                 String t = rs.getString(5);
                 Instant created = rs.getTimestamp(6).toInstant();
                 boolean open = rs.getBoolean(7);
-                String desc = rs.getString(8);
-                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open));
+                boolean expired = rs.getBoolean(8);
+                String desc = rs.getString(9);
+                list.add(new Suggestion(id, player, paramId, value, desc, t, created, open, expired));
             }
         } catch (SQLException e) {
             logger.severe("Failed to fetch closed suggestions: " + e.getMessage());
@@ -569,8 +584,10 @@ public class VotingService {
             }
             if (Duration.between(s.created, Instant.now()).compareTo(voteLifetime) >= 0) {
                 VoteWeights w = getVoteWeights(s.id);
-                if (w.yesWeight > w.noWeight) {
+                if (w.yesWeight > w.noWeight && w.yesWeight >= w.requiredWeight) {
                     applySuggestion(s.id);
+                } else if (w.yesWeight + w.noWeight < w.requiredWeight) {
+                    markExpired(s.id);
                 } else {
                     markClosed(s.id);
                 }
@@ -715,6 +732,17 @@ public class VotingService {
         }
     }
 
+    private void markExpired(int suggestionId) {
+        String sql = "UPDATE suggestions SET open = 0, expired = 1 WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, suggestionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warning("Failed to expire suggestion: " + e.getMessage());
+        }
+    }
+
     private void markOpen(int suggestionId) {
         String sql = "UPDATE suggestions SET open = 1 WHERE id = ?";
         try (Connection conn = database.getConnection();
@@ -745,7 +773,7 @@ public class VotingService {
 
     private Suggestion getSuggestion(int id) {
         if (!database.isConnected()) return null;
-        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, " +
+        String sql = "SELECT s.id, s.player_uuid, s.parameter_id, s.new_value, s.text, s.created, s.open, s.expired, " +
                 "COALESCE(c.description, r.rule_text) " +
                 "FROM suggestions s " +
                 "LEFT JOIN config_params c ON s.parameter_id = c.id " +
@@ -763,8 +791,9 @@ public class VotingService {
                     String t = rs.getString(5);
                     java.time.Instant created = rs.getTimestamp(6).toInstant();
                     boolean open = rs.getBoolean(7);
-                    String desc = rs.getString(8);
-                    return new Suggestion(sid, player, paramId, val, desc, t, created, open);
+                    boolean expired = rs.getBoolean(8);
+                    String desc = rs.getString(9);
+                    return new Suggestion(sid, player, paramId, val, desc, t, created, open, expired);
                 }
             }
         } catch (SQLException e) {

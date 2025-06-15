@@ -9,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -80,5 +81,79 @@ public class WebTokenService {
 
     public int getVotePingIntervalMinutes() {
         return votePingIntervalMinutes;
+    }
+
+    public String getInternalHost() {
+        return internalHost;
+    }
+
+    public int getInternalPort() {
+        return internalPort;
+    }
+
+    /** Validate token once and mark as used. */
+    public UUID validateToken(String token, String type) {
+        if (token == null) return null;
+        cleanupExpiredTokens();
+        if (!database.isConnected()) return null;
+        String sql = "SELECT id, player_uuid, type, expires_at, used FROM web_access_tokens WHERE token = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    boolean used = rs.getBoolean("used");
+                    String t = rs.getString("type");
+                    Timestamp exp = rs.getTimestamp("expires_at");
+                    if (!used && (type == null || type.equals(t)) && exp.toInstant().isAfter(Instant.now())) {
+                        String id = rs.getString("id");
+                        try (PreparedStatement upd = conn.prepareStatement("UPDATE web_access_tokens SET used = 1 WHERE id = ?")) {
+                            upd.setString(1, id);
+                            upd.executeUpdate();
+                        }
+                        return UUID.fromString(rs.getString("player_uuid"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to validate token: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /** Check token without updating its used flag. */
+    public UUID checkToken(String token) {
+        if (token == null) return null;
+        cleanupExpiredTokens();
+        if (!database.isConnected()) return null;
+        String sql = "SELECT player_uuid, expires_at FROM web_access_tokens WHERE token = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Timestamp exp = rs.getTimestamp("expires_at");
+                    if (exp.toInstant().isAfter(Instant.now())) {
+                        return UUID.fromString(rs.getString(1));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to check token: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /** Delete expired or used tokens. */
+    public void cleanupExpiredTokens() {
+        if (!database.isConnected()) return;
+        String sql = "DELETE FROM web_access_tokens WHERE expires_at < ? OR used = 1";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.from(Instant.now()));
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Failed to clean tokens: " + e.getMessage());
+        }
     }
 }

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Suggest</title></head>
+<body>
+<h2>Neuer Vorschlag</h2>
+<label>Parameter ID: <input id="param"></label><br/>
+<label>Neuer Wert: <input id="value"></label><br/>
+<label>Begründung:<br/><textarea id="reason"></textarea></label><br/>
+<button onclick="submit()">Absenden</button>
+<script>
+const token=new URLSearchParams(location.search).get('token');
+async function submit(){
+  const r=await fetch('/submit-suggestion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,parameter:parseInt(document.getElementById('param').value),value:document.getElementById('value').value,reason:document.getElementById('reason').value})});
+  const j=await r.json();
+  alert('Gesendet, ID '+j.id);
+}
+</script>
+</body></html>
